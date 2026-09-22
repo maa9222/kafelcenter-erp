@@ -62,7 +62,24 @@ function updateCameraSelectDropdown(cameras) {
     select.classList.remove("hidden");
 }
 
-// Multi-Level Camera Startup Strategy
+// Modal handlers for camera permission guide
+function showCameraPermissionModal() {
+    const m = document.getElementById("cameraPermissionModal");
+    if (m) {
+        m.classList.remove("hidden");
+        m.classList.add("flex");
+    }
+}
+
+function closeCameraPermissionModal() {
+    const m = document.getElementById("cameraPermissionModal");
+    if (m) {
+        m.classList.add("hidden");
+        m.classList.remove("flex");
+    }
+}
+
+// Multi-Level Camera Startup Strategy without breaking constraints
 async function startCameraStream() {
     // 1. Check if mediaDevices is supported (requires secure context or localhost)
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -73,34 +90,43 @@ async function startCameraStream() {
         throw new Error("MEDIA_DEVICES_NOT_SUPPORTED");
     }
 
-    if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
+    // 2. Request camera stream directly with plain video constraint (triggers browser permission popup)
+    try {
+        const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Permission successfully obtained! Release test tracks so camera is available for scanner:
+        testStream.getTracks().forEach(track => track.stop());
+    } catch (permErr) {
+        console.error("Kameraga ruxsat tekshiruvida xato:", permErr);
+        throw permErr;
     }
 
+    // Clean up any old instance
+    if (html5QrCode) {
+        try { await html5QrCode.stop(); } catch (_) {}
+        try { html5QrCode.clear(); } catch (_) {}
+        html5QrCode = null;
+    }
+    html5QrCode = new Html5Qrcode("reader");
+
+    // Minimal, standard scan config - NO aspectRatio, NO torch constraints that crash USB webcams
     const config = {
-        fps: 15,
+        fps: 10,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const size = Math.floor(minEdge * 0.72);
-            return {
-                width: Math.max(160, Math.min(size, 260)),
-                height: Math.max(160, Math.min(size, 260))
-            };
-        },
-        aspectRatio: 1.0,
-        showTorchButtonIfSupported: true,
-        showZoomSliderIfSupported: true
+            const size = Math.max(120, Math.min(Math.floor(minEdge * 0.72), 240));
+            return { width: size, height: size };
+        }
     };
 
-    // 2. Enumerate cameras if not done yet
+    // 3. Enumerate cameras now that permission is granted
     try {
         availableCameras = await Html5Qrcode.getCameras();
         updateCameraSelectDropdown(availableCameras);
     } catch (camErr) {
-        console.warn("Kamerlar ro'yxatini olib bo'lmadi, standart usul bilan davom etamiz:", camErr);
+        console.warn("Kamerlar ro'yxatini olib bo'lmadi:", camErr);
     }
 
-    // 3. Attempt: specific selected camera ID
+    // 4. Attempt: specific selected camera ID
     if (currentCameraId) {
         try {
             await html5QrCode.start(currentCameraId, config, onScanSuccess, onScanFailure);
@@ -110,7 +136,7 @@ async function startCameraStream() {
         }
     }
 
-    // 4. Attempt: back/rear camera or first available camera from getCameras
+    // 5. Attempt: first available camera from getCameras
     if (availableCameras && availableCameras.length > 0) {
         const backCam = availableCameras.find(c => /back|rear|environment|orqa/i.test(c.label));
         const candidate = backCam || availableCameras[0];
@@ -125,24 +151,24 @@ async function startCameraStream() {
         }
     }
 
-    // 5. Attempt: { facingMode: "environment" } (Back camera)
-    try {
-        await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
-        return;
-    } catch (e) {
-        console.warn("facingMode: environment ishlamadi, facingMode: user bilan sinaymiz:", e);
-    }
-
-    // 6. Attempt: { facingMode: "user" } (Webcam / Laptop camera)
+    // 6. Attempt: facingMode user (Webcam / Laptop camera)
     try {
         await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, onScanFailure);
         return;
     } catch (e) {
-        console.warn("facingMode: user ishlamadi, ideal constraints bilan sinaymiz:", e);
+        console.warn("facingMode: user ishlamadi:", e);
     }
 
-    // 7. Attempt: ideal constraint
-    await html5QrCode.start({ facingMode: { ideal: "environment" } }, config, onScanSuccess, onScanFailure);
+    // 7. Attempt: facingMode environment (Back camera)
+    try {
+        await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+        return;
+    } catch (e) {
+        console.warn("facingMode: environment ishlamadi:", e);
+    }
+
+    // 8. Attempt: default video track (true)
+    await html5QrCode.start(true, config, onScanSuccess, onScanFailure);
 }
 
 // Toggle Live Camera on/off
@@ -161,6 +187,7 @@ async function toggleCamera() {
             } catch (e) {
                 console.log("Kamerani to'xtatishda xato:", e);
             }
+            html5QrCode = null;
         }
         isScannerRunning = false;
         if (btnText) btnText.innerText = "Kamerani Yoqish";
@@ -194,6 +221,14 @@ async function toggleCamera() {
             notify("Kamera yoqildi. QR kodni yaqinlashtiring", "info");
         } catch (err) {
             console.error("Kamerani ochishda xato:", err);
+            
+            // Clean up html5QrCode so next attempt starts clean
+            if (html5QrCode) {
+                try { await html5QrCode.stop(); } catch (_) {}
+                try { html5QrCode.clear(); } catch (_) {}
+                html5QrCode = null;
+            }
+
             if (placeholder) placeholder.classList.remove("hidden");
             if (laserLine) laserLine.classList.add("hidden");
             if (container) {
@@ -207,20 +242,21 @@ async function toggleCamera() {
                 btn.classList.replace("hover:bg-rose-500", "hover:bg-sky-500");
             }
 
-            // Provide accurate and helpful feedback
+            // Accurate, friendly error diagnosis
             const errName = err.name || "";
-            const errMsg = (err.message || "").toLowerCase();
+            const errStr = (typeof err === "string" ? err : (err.message || err.name || String(err))).toLowerCase();
 
-            if (err.message === "SECURE_CONTEXT_REQUIRED") {
-                notify("⚠️ Brauzer xavfsizlik talabi: Jonli kamera faqat HTTPS yoki localhost orqali ishlaydi. Pastdagi 'Rasm / Surat' tugmasidan foydalaning — u kamerangizni rasm olish orqali 100% ishlatadi!", "warning");
-            } else if (errName === "NotAllowedError" || errMsg.includes("permission") || errMsg.includes("denied")) {
-                notify("⚠️ Kameraga brauzer ruxsati berilmagan! Brauzer manzil satridagi qulf / kamera belgisini bosib ruxsat bering yoki 'Rasm / Surat' tugmasidan foydalaning.", "danger");
-            } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError" || errMsg.includes("not found")) {
-                notify("⚠️ Qurilmada kamera topilmadi! 'Rasm / Surat' tugmasi orqali rasm yuklang yoki SKU qidiruvidan foydalaning.", "warning");
-            } else if (errName === "NotReadableError" || errName === "TrackStartError" || errMsg.includes("in use")) {
-                notify("⚠️ Kamera boshqa ilova tomonidan band qilingan. Boshqa ilovalarni yopib qayta urinib ko'ring.", "warning");
+            if (errStr.includes("secure_context_required")) {
+                notify("⚠️ Brauzer xavfsizlik talabi: Jonli kamera faqat HTTPS yoki localhost (127.0.0.1) orqali ishlaydi. 'Rasm / Surat' tugmasidan foydalaning!", "warning");
+            } else if (errName === "NotAllowedError" || errStr.includes("notallowed") || errStr.includes("permission") || errStr.includes("denied")) {
+                showCameraPermissionModal();
+                notify("⚠️ Kameraga brauzer ruxsati berilmagan! Ekrandagi ko'rsatmaga qarang yoki 'Rasm / Surat' tugmasini bosing.", "danger");
+            } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError" || errStr.includes("not found") || errStr.includes("notfound")) {
+                notify("⚠️ Kompyuterda kamera topilmadi! 'Rasm / Surat' tugmasi orqali rasm yuklang yoki SKU qidiruvidan foydalaning.", "warning");
+            } else if (errName === "NotReadableError" || errName === "TrackStartError" || errStr.includes("in use") || errStr.includes("notreadable")) {
+                notify("⚠️ Kamera boshqa dastur tomonidan band qilingan. Uni yopib qayta urinib ko'ring.", "warning");
             } else {
-                notify("⚠️ Kamerani yoqish imkoni bo'lmadi. Ruxsat bering yoki 'Rasm / Surat' tugmasidan foydalaning.", "danger");
+                notify(`⚠️ Kamera xatosi: ${err.message || err.name || err}. 'Rasm / Surat' tugmasidan foydalanishingiz mumkin.`, "danger");
             }
         }
     }
@@ -234,16 +270,12 @@ async function switchCamera(selectedCameraId) {
         try {
             await html5QrCode.stop();
             const config = {
-                fps: 15,
+                fps: 10,
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    const size = Math.floor(minEdge * 0.72);
-                    return {
-                        width: Math.max(160, Math.min(size, 260)),
-                        height: Math.max(160, Math.min(size, 260))
-                    };
-                },
-                aspectRatio: 1.0
+                    const size = Math.max(120, Math.min(Math.floor(minEdge * 0.72), 240));
+                    return { width: size, height: size };
+                }
             };
             await html5QrCode.start(currentCameraId, config, onScanSuccess, onScanFailure);
             notify("Kamera almashtirildi", "info");
