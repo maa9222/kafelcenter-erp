@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Xodimlar Boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
+                <i class="fa-solid fa-users-gear text-sky-600"></i>
+                <span>Xodimlar va Rollar Boshqaruvi</span>
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">Super admin, sotuvchi va omborchilar ro'yxati, yangi xodim qo'shish va parollarni o'zgartirish</p>
+        </div>
+    </div>
+
+    <!-- 2 Column Layout: Add User Form & Users Table -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: Add New User Form (4 Cols) -->
+        <div class="lg:col-span-4">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <h2 class="font-bold text-slate-800 text-base mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-user-plus text-emerald-600"></i>
+                    <span>Yangi Xodim Qo'shish</span>
+                </h2>
+
+                <form method="POST" action="/admin/xodimlar" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Ism va Familiya <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="full_name" required placeholder="Masalan: Sardor Aliyev" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-medium">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Login (Foydalanuvchi nomi) <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="username" required placeholder="masalan: sardor_sotuv" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Parol <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="password" name="password" required placeholder="Kamida 6 belgi" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Tizimdagi Roli <span class="text-rose-500">*</span>
+                        </label>
+                        <select name="role" required class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-semibold">
+                            <option value="sotuvchi" selected>📱 Sotuvchi (Showroom & Kassa)</option>
+                            <option value="omborchi">📦 Omborchi (Kirim & Nakladnoy)</option>
+                            <option value="admin">👑 Super Admin (To'liq huquq)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-sm mt-4">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Xodimni Saqlash</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right: Users Table (8 Cols) -->
+        <div class="lg:col-span-8">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <h2 class="font-bold text-slate-800 text-base mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-users text-sky-600"></i>
+                    <span>Tizimdagi Barcha Xodimlar ({{ users|length }})</span>
+                </h2>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                            <tr>
+                                <th class="py-3 px-3 rounded-l-xl">Xodim</th>
+                                <th class="py-3 px-3">Login</th>
+                                <th class="py-3 px-3">Roli</th>
+                                <th class="py-3 px-3">Qo'shilgan sana</th>
+                                <th class="py-3 px-3 rounded-r-xl text-right">Amallar</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for u in users %}
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="py-3 px-3">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-9 h-9 rounded-full flex items-center justify-center font-black text-xs text-white {% if u.role == 'admin' %}bg-amber-500{% elif u.role == 'sotuvchi' %}bg-sky-600{% else %}bg-emerald-600{% endif %}">
+                                            {{ u.full_name[:1].upper() }}
+                                        </div>
+                                        <span class="font-bold text-slate-900">{{ u.full_name }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-3 font-mono text-xs text-slate-600 font-semibold">{{ u.username }}</td>
+                                <td class="py-3 px-3">
+                                    {% if u.role == 'admin' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-800">
+                                        <i class="fa-solid fa-crown text-[10px] mr-1"></i> Super Admin
+                                    </span>
+                                    {% elif u.role == 'sotuvchi' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-sky-100 text-sky-800">
+                                        <i class="fa-solid fa-qrcode text-[10px] mr-1"></i> Sotuvchi
+                                    </span>
+                                    {% elif u.role == 'omborchi' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
+                                        <i class="fa-solid fa-boxes-stacked text-[10px] mr-1"></i> Omborchi
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-3 text-xs text-slate-400 font-medium">{{ u.created_at[:10] }}</td>
+                                <td class="py-3 px-3 text-right">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <!-- Change password modal button -->
+                                        <button type="button" onclick="changePassword({{ u.id }}, '{{ u.username }}')" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition" title="Parolni o'zgartirish">
+                                            <i class="fa-solid fa-key text-xs"></i>
+                                        </button>
+                                        {% if u.username != 'admin' %}
+                                        <button type="button" onclick="confirmDeleteUser({{ u.id }}, '{{ u.username }}')" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition" title="O'chirish">
+                                            <i class="fa-solid fa-trash-can text-xs"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function changePassword(userId, username) {
+    if (typeof showConfirmModal === 'function') {
+        const inputHtml = `
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Yangi Maxfiy Parol:</label>
+                <input type="password" id="modalNewPassword" placeholder="Kamida 4 belgi" class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono">
+            </div>
+        `;
+        showConfirmModal({
+            title: `'${username}' uchun parolni yangilash`,
+            message: "Xodim uchun yangi parolni kiriting:",
+            html: inputHtml,
+            icon: "fa-solid fa-key text-amber-500",
+            confirmText: "Parolni Saqlash",
+            confirmClass: "px-5 py-2.5 rounded-xl text-xs font-black bg-sky-600 hover:bg-sky-500 text-white shadow-md transition",
+            onConfirm: () => {
+                const pass = document.getElementById('modalNewPassword')?.value || '';
+                if (pass.trim().length >= 4) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/admin/xodimlar/parol/${userId}`;
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'new_password';
+                    input.value = pass.trim();
+                    form.appendChild(input);
+                    document.body.appendChild(form);
+                    form.submit();
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast("Parol kamida 4 belgidan iborat bo'lishi kerak!", "warning");
+                    } else {
+                        alert("Parol kamida 4 belgidan iborat bo'lishi kerak!");
+                    }
+                }
+            }
+        });
+        setTimeout(() => {
+            const inp = document.getElementById('modalNewPassword');
+            if (inp) inp.focus();
+        }, 100);
+    } else {
+        const newPass = prompt(`'${username}' uchun yangi parolni kiriting:`);
+        if (newPass && newPass.trim().length >= 4) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/xodimlar/parol/${userId}`;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'new_password';
+            input.value = newPass.trim();
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        } else if (newPass !== null) {
+            alert("Parol kamida 4 belgidan iborat bo'lishi kerak!");
+        }
+    }
+}
+
+function confirmDeleteUser(userId, username) {
+    if (typeof showConfirmModal === 'function') {
+        showConfirmModal({
+            title: "Xodimni o'chirish",
+            message: `Rostdan ham '${username}' xodimini tizimdan o'chirmoqchimisiz?`,
+            icon: "fa-solid fa-trash-can text-rose-500",
+            confirmText: "Ha, O'chirish",
+            confirmClass: "px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-500 text-white shadow-md transition",
+            onConfirm: () => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/admin/xodimlar/ochirish/${userId}`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    } else {
+        if (confirm(`Rostdan ham '${username}' xodimini o'chirmoqchimisiz?`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/xodimlar/ochirish/${userId}`;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+}
+</script>
+{% endblock %}

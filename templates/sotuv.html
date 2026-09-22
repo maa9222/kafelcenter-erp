@@ -1,0 +1,722 @@
+{% extends "base.html" %}
+
+{% block title %}Sotuv & QR Showroom{% endblock %}
+
+{% block head_extra %}
+<!-- html5-qrcode library for camera barcode & QR code reading -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-3.5 sm:space-y-4">
+    <!-- Header with Breadcrumb and Action Buttons -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-0.5">
+        <div>
+            <div class="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-wider text-sky-600 mb-0.5">
+                <i class="fa-solid fa-store"></i>
+                <span>Showroom &amp; POS Tizimi</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center space-x-2.5">
+                <span class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i class="fa-solid fa-qrcode"></i>
+                </span>
+                <span>Sotuv Bo'limi (Showroom &amp; QR Skaner)</span>
+            </h1>
+            <p class="text-xs text-slate-500 mt-0.5">Kafel QR kodini skanerlang yoki vitrinadan tanlang — ombor qoldig'i va narxi bir zumda chiqadi</p>
+        </div>
+
+        <div class="flex items-center space-x-2 flex-shrink-0">
+            <!-- Smart Room Calculator Trigger -->
+            <button type="button" onclick="openTileCalculator()" class="inline-flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold px-3.5 py-2 rounded-xl border border-slate-200 shadow-2xs hover:border-slate-300 transition text-xs">
+                <i class="fa-solid fa-calculator text-amber-500 text-xs"></i>
+                <span>Xona Kalkulyatori</span>
+            </button>
+
+            <!-- Kassa Checkout Trigger Button -->
+            <button type="button" onclick="openCheckoutModal()" class="inline-flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-3.5 py-2 rounded-xl shadow-xs transition text-xs">
+                <i class="fa-solid fa-cash-register text-emerald-400 text-xs"></i>
+                <span>Kassa / To'lov</span>
+                <span id="cartCountBadge" class="ml-0.5 bg-emerald-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main 2-Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
+        
+        <!-- Left Side: Scanner, Scanned Tile & Showroom Catalog (7 Cols) -->
+        <div class="lg:col-span-7 space-y-3.5 sm:space-y-4">
+            
+            <!-- QR Scanner Card -->
+            <div class="bg-white rounded-2xl p-4 sm:p-4.5 shadow-xs border border-slate-200/90 space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-xs">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <h2 class="font-bold text-slate-800 text-sm">Kameradan QR Kod Skanerlash</h2>
+                    </div>
+                    <button id="toggleScannerBtn" onclick="toggleCamera()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
+                        <i class="fa-solid fa-video text-xs"></i>
+                        <span id="scannerBtnText">Kamerani Yoqish</span>
+                    </button>
+                </div>
+
+                <!-- Video Viewport with Laser Beam & Corners -->
+                <div id="reader-container" class="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 min-h-[145px] flex items-center justify-center text-center p-3 transition-all duration-300">
+                    <!-- Dynamic Laser Line when scanning -->
+                    <div id="laserLine" class="laser-line hidden"></div>
+                    <!-- Corner Markers -->
+                    <div class="scan-corner scan-corner-tl"></div>
+                    <div class="scan-corner scan-corner-tr"></div>
+                    <div class="scan-corner scan-corner-bl"></div>
+                    <div class="scan-corner scan-corner-br"></div>
+
+                    <div id="reader" class="w-full max-w-sm"></div>
+                    
+                    <div id="cameraPlaceholder" class="text-slate-400 flex flex-col items-center py-2">
+                        <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sky-400 mb-2 shadow-inner">
+                            <i class="fa-solid fa-qrcode text-xl"></i>
+                        </div>
+                        <p class="text-xs font-bold text-slate-200">Kamera o'chiq</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5 max-w-xs leading-tight">QR stikerni o'qish uchun "Kamerani Yoqish" tugmasini bosing yoki pastdan SKU kiriting</p>
+                    </div>
+                </div>
+
+                <!-- Manual SKU Search input -->
+                <div class="pt-1 border-t border-slate-100 flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <input type="text" id="manualCodeInput" placeholder="QR kod yoki SKU kiriting (masalan: KF-KER-ROY-1001)..." class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white font-mono uppercase transition">
+                        <i class="fa-solid fa-barcode absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                    <button onclick="searchByManualCode()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-2xs flex items-center space-x-1.5 flex-shrink-0">
+                        <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                        <span>Qidirish</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scanned Product Result Card (Dynamic) -->
+            <div id="scannedProductCard" class="hidden bg-white rounded-2xl p-4 sm:p-4.5 shadow-xs border-2 border-sky-400 transition-all space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-xs font-black text-emerald-700 uppercase tracking-wider">Kafel Aniqlardi!</span>
+                    </div>
+                    <span id="cardSku" class="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-lg border border-slate-200"></span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-center">
+                    <!-- Photo (Full Uncropped) -->
+                    <div class="sm:col-span-5">
+                        <div class="w-full h-44 rounded-xl bg-slate-900/5 overflow-hidden border border-slate-200 flex items-center justify-center p-2 relative group shadow-inner">
+                            <img id="cardImage" src="" alt="Kafel" class="max-h-full max-w-full object-contain rounded cursor-pointer hover:opacity-95 transition" onclick="openTileImageModal(this.src)" title="Kattalashtirish uchun bosing">
+                            <button type="button" onclick="openTileImageModal(document.getElementById('cardImage').src)" class="absolute top-1.5 right-1.5 bg-slate-900/70 hover:bg-slate-900 text-white w-6 h-6 rounded flex items-center justify-center text-[10px] transition" title="Kattalashtirish">
+                                <i class="fa-solid fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Details & Quantities -->
+                    <div class="sm:col-span-7 flex flex-col justify-between space-y-2">
+                        <div>
+                            <span id="cardBrand" class="text-[10px] font-black uppercase text-sky-600 tracking-wider"></span>
+                            <h3 id="cardModel" class="text-base sm:text-lg font-black text-slate-900 leading-tight"></h3>
+                            <div class="mt-1 flex items-center space-x-2">
+                                <span id="cardSize" class="text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded"></span>
+                                <span id="cardRack" class="text-xs text-slate-500 font-medium"></span>
+                            </div>
+                        </div>
+
+                        <!-- Warehouse Stock Badge -->
+                        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Ombordagi Mavjud Qoldiq:</span>
+                            <div class="flex items-baseline space-x-2 mt-0.5">
+                                <span id="cardStock" class="text-xl font-black text-emerald-600"></span>
+                                <span id="cardUnit" class="text-xs font-bold text-slate-500"></span>
+                                <span id="cardBoxStock" class="text-xs font-medium text-slate-400"></span>
+                            </div>
+                        </div>
+
+                        <!-- Price & Box size -->
+                        <div class="flex items-baseline justify-between pt-0.5">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">1 m² Narxi:</span>
+                                <span id="cardPrice" class="text-lg font-black text-slate-900"></span>
+                                <span class="text-xs font-medium text-slate-500">so'm</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">1 Quti maydoni:</span>
+                                <span id="cardBoxSize" class="text-xs font-bold text-slate-700"></span>
+                            </div>
+                        </div>
+
+                        <!-- Quantity Selector & Action Buttons -->
+                        <div class="pt-2 border-t border-slate-100 space-y-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-32 flex-shrink-0">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Miqdori (m²):</label>
+                                    <input type="number" id="addQtyInput" step="0.1" value="1" min="0.1" class="w-full px-2.5 py-1.5 text-sm font-black bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 focus:bg-white text-center">
+                                </div>
+                                <button onclick="addScannedProductToCart()" id="addScannedBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 px-3 rounded-xl shadow-xs transition flex items-center justify-center space-x-1.5 mt-3.5 text-xs">
+                                    <i class="fa-solid fa-cart-plus"></i>
+                                    <span>Ro'yxatga Qo'shish</span>
+                                </button>
+                            </div>
+                            <!-- Fast Quantity Preset Chips -->
+                            <div class="flex flex-wrap items-center gap-1">
+                                <span class="text-[10px] text-slate-400 font-bold mr-0.5">Tezkor:</span>
+                                <button type="button" onclick="setScannedQty(1)" class="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 transition">+1 m²</button>
+                                <button type="button" onclick="setScannedQtyByBoxes(1)" class="px-2 py-0.5 rounded-md bg-sky-50 hover:bg-sky-100 text-[10px] font-bold text-sky-700 transition">+1 quti</button>
+                                <button type="button" onclick="setScannedQtyByBoxes(5)" class="px-2 py-0.5 rounded-md bg-sky-50 hover:bg-sky-100 text-[10px] font-bold text-sky-700 transition">+5 quti</button>
+                                <button type="button" onclick="setScannedQtyByBoxes(10)" class="px-2 py-0.5 rounded-md bg-sky-50 hover:bg-sky-100 text-[10px] font-bold text-sky-700 transition">+10 quti</button>
+                                <button type="button" onclick="setScannedMaxQty()" class="px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-[10px] font-bold text-emerald-700 transition">Barcha qoldiq</button>
+                            </div>
+                            <button onclick="openTileCalculator(currentScannedProduct)" class="w-full bg-slate-100 hover:bg-sky-50 text-slate-700 hover:text-sky-700 font-bold py-1.5 px-3 rounded-lg text-xs transition border border-slate-200 flex items-center justify-center space-x-1.5">
+                                <i class="fa-solid fa-calculator text-amber-500 text-xs"></i>
+                                <span>Xona o'lchamlari bo'yicha hisoblash (Kalkulyator)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Showroom Instant Tile Catalog Section -->
+            <div class="bg-white rounded-2xl p-4 sm:p-4.5 shadow-xs border border-slate-200/90 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-b border-slate-100 pb-2.5">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
+                            <i class="fa-solid fa-shapes text-sky-600"></i>
+                            <span>Showroom Kafel Vitrinasi</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Do'kondagi kafellarni tanlang yoki o'lchami bo'yicha saralang</p>
+                    </div>
+
+                    <!-- Size Quick Filter Chips -->
+                    <div class="flex flex-wrap gap-1 text-xs font-bold" id="catalogFilterChips">
+                        <button type="button" onclick="loadShowroomCatalog('', '')" id="filterAllBtn" class="catalog-filter-btn px-2.5 py-1 rounded-lg bg-slate-900 text-white shadow-2xs">Barchasi</button>
+                        <button type="button" onclick="loadShowroomCatalog('', '60x120')" class="catalog-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">60x120</button>
+                        <button type="button" onclick="loadShowroomCatalog('', '60x60')" class="catalog-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">60x60</button>
+                        <button type="button" onclick="loadShowroomCatalog('', '30x60')" class="catalog-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">30x60</button>
+                        <button type="button" onclick="loadDefectsCatalog()" id="filterDefectsBtn" class="catalog-filter-btn px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold border border-rose-200 shadow-2xs transition flex items-center space-x-1" title="Arzon siniq va defekt kafellarni ko'rish">
+                            <i class="fa-solid fa-heart-crack text-rose-500 text-[10px]"></i>
+                            <span>Siniq / Braklar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Instant Live Search Bar for Catalog -->
+                <div class="relative">
+                    <input type="text" id="catalogSearchInput" oninput="filterCatalogInstant(this.value)" placeholder="Vitrinadan qidirish (nomi, markasi, o'lchami)..." class="w-full pl-9 pr-8 py-2 text-xs bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white font-medium transition">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <button type="button" onclick="document.getElementById('catalogSearchInput').value=''; filterCatalogInstant('');" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold leading-none p-0.5">&times;</button>
+                </div>
+
+                <!-- Catalog Grid -->
+                <div id="showroomCatalogGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <!-- Dynamically populated by pos.js -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Order List / Cart (5 Cols) -->
+        <div class="lg:col-span-5">
+            <div class="bg-white rounded-2xl p-4 sm:p-4.5 shadow-xs border border-slate-200/90 lg:sticky lg:top-3 flex flex-col lg:max-h-[calc(100vh-2rem)] min-h-[420px] space-y-3">
+                
+                <!-- Multi-Cart Tab Switcher (Hold Cart / Kutish Rejimi) -->
+                <div class="flex items-center gap-1.5 bg-slate-100/90 p-1 rounded-xl text-xs font-bold select-none">
+                    <button type="button" id="cartTabBtn1" onclick="switchCartTab(1)" class="flex-1 py-1.5 px-3 rounded-lg bg-white text-slate-900 shadow-2xs transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-basket-shopping text-sky-600 text-xs"></i>
+                        <span>Savat #1</span>
+                        <span id="cartCountBadge1" class="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-100 text-sky-700 font-bold">0</span>
+                    </button>
+                    <button type="button" id="cartTabBtn2" onclick="switchCartTab(2)" class="flex-1 py-1.5 px-3 rounded-lg text-slate-500 hover:text-slate-800 transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-pause text-amber-500 text-xs"></i>
+                        <span>Savat #2 (Kutish)</span>
+                        <span id="cartCountBadge2" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-600 font-bold">0</span>
+                    </button>
+                </div>
+
+                <!-- Cart Header -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs font-bold">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-slate-900 text-xs sm:text-sm" id="cartActiveTitle">Savat #1 dagi Kafellar</h2>
+                            <p class="text-[10px] text-slate-400">Xaridor uchun shakllangan ro'yxat</p>
+                        </div>
+                    </div>
+                    <button onclick="clearCart()" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition flex items-center space-x-1" title="Ro'yxatni tozalash">
+                        <i class="fa-solid fa-trash-can text-[11px]"></i>
+                        <span>Tozalash</span>
+                    </button>
+                </div>
+
+                <!-- Cart Items List (Scrollable) -->
+                <div id="cartItemsList" class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[380px]">
+                    <div id="emptyCartMessage" class="text-center py-10 text-slate-400">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 mx-auto mb-2 shadow-2xs">
+                            <i class="fa-solid fa-basket-shopping text-xl"></i>
+                        </div>
+                        <p class="text-xs font-bold text-slate-600">Ro'yxat hali bo'sh</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Kafellarni QR kod orqali skanerlang yoki vitrinadan qo'shing</p>
+                    </div>
+                </div>
+
+                <!-- Auxiliary Materials Auto-Recommendation Box -->
+                <div id="cartAuxBox" class="hidden p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 text-xs space-y-1.5">
+                    <div class="flex items-center justify-between font-bold text-amber-900 text-[10px] uppercase tracking-wider">
+                        <span><i class="fa-solid fa-trowel-bricks mr-1"></i> Tavsiya Etiladigan Yordamchi Materiallar:</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1.5 text-center text-slate-800 font-mono text-[11px] pt-1 border-t border-amber-200/50">
+                        <div class="bg-white/80 p-1.5 rounded-lg border border-amber-100">
+                            <span class="text-[9px] text-slate-400 block font-sans">KLEY (~5kg/m²)</span>
+                            <span id="auxKleyVal" class="font-black text-amber-900">0 qop</span>
+                        </div>
+                        <div class="bg-white/80 p-1.5 rounded-lg border border-amber-100">
+                            <span class="text-[9px] text-slate-400 block font-sans">ZATIRKA</span>
+                            <span id="auxZatirkaVal" class="font-black text-amber-900">0 kg</span>
+                        </div>
+                        <div class="bg-white/80 p-1.5 rounded-lg border border-amber-100">
+                            <span class="text-[9px] text-slate-400 block font-sans">SVP TEKISLASH</span>
+                            <span id="auxSvpVal" class="font-black text-amber-900">0 dona</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cart Summary & Checkout Button -->
+                <div class="pt-2.5 border-t border-slate-100 space-y-2">
+                    <div class="flex justify-between text-xs text-slate-500 font-medium">
+                        <span>Jami kafel turlari:</span>
+                        <span id="cartTotalItems" class="font-bold text-slate-800">0 xil</span>
+                    </div>
+                    <div class="flex justify-between text-xs text-slate-500 font-medium">
+                        <span>Jami maydon:</span>
+                        <span id="cartTotalArea" class="font-bold text-slate-800">0 m²</span>
+                    </div>
+                    <div class="flex justify-between items-baseline pt-1 border-t border-slate-100">
+                        <span class="text-xs sm:text-sm font-bold text-slate-700">Umumiy Summa:</span>
+                        <div class="text-right">
+                            <span id="cartTotalSum" class="text-xl sm:text-2xl font-black text-slate-900 font-mono">0</span>
+                            <span class="text-xs font-bold text-slate-500">so'm</span>
+                        </div>
+                    </div>
+
+                    <!-- 2 Actions: Smeta print & Kassa checkout -->
+                    <div class="grid grid-cols-12 gap-2 pt-0.5">
+                        <a href="/sotuv/smeta" target="_blank" title="Xaridor yoki usta uchun tijoriy smeta chiqarish" class="col-span-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-2 rounded-xl transition flex items-center justify-center space-x-1.5 text-xs text-center border border-slate-200">
+                            <i class="fa-solid fa-file-lines text-amber-600"></i>
+                            <span>Smeta</span>
+                        </a>
+                        <button type="button" onclick="openCheckoutModal()" id="checkoutBtn" class="col-span-8 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 px-3 rounded-xl shadow-xs transition flex items-center justify-center space-x-1.5 text-center text-xs sm:text-sm">
+                            <i class="fa-solid fa-cash-register"></i>
+                            <span>To'lov Qilish (Kassa) &rarr;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SMART ROOM & TILE CALCULATOR MODAL -->
+<div id="tileCalcModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-base leading-tight" id="calcTileTitle">Xona va Kafel Hisoblagichi</h3>
+                    <div class="flex items-center space-x-2 text-xs text-slate-400">
+                        <span id="calcTileSize">O'lcham va qutilar hisobi</span>
+                        <span id="calcTileBox" class="text-sky-600 font-semibold"></span>
+                    </div>
+                </div>
+            </div>
+            <button onclick="closeTileCalculator()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <!-- Room Type Selection -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+            <label class="cursor-pointer text-center">
+                <input type="radio" name="calcType" value="pol" checked onchange="calculateTileRequirement()" class="peer hidden">
+                <div class="py-1.5 rounded-lg peer-checked:bg-white peer-checked:shadow-xs peer-checked:text-sky-600 text-slate-600 transition">
+                    <i class="fa-solid fa-square mr-1"></i> Pol Kafel
+                </div>
+            </label>
+            <label class="cursor-pointer text-center">
+                <input type="radio" name="calcType" value="devor" onchange="calculateTileRequirement()" class="peer hidden">
+                <div class="py-1.5 rounded-lg peer-checked:bg-white peer-checked:shadow-xs peer-checked:text-sky-600 text-slate-600 transition">
+                    <i class="fa-solid fa-border-all mr-1"></i> Devor Kafel
+                </div>
+            </label>
+        </div>
+
+        <!-- Dimension Inputs -->
+        <div class="grid grid-cols-2 gap-2.5 text-xs">
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Xona Uzunligi (metr):</label>
+                <input type="number" id="calcLength" value="4.0" step="0.1" min="0" oninput="calculateTileRequirement()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-black text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Xona Eni (metr):</label>
+                <input type="number" id="calcWidth" value="3.5" step="0.1" min="0" oninput="calculateTileRequirement()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-black text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Balandlik (faqat devor):</label>
+                <input type="number" id="calcHeight" value="2.8" step="0.1" min="0" oninput="calculateTileRequirement()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-black text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Qirqish Zaxirasi (Zapas):</label>
+                <select id="calcWaste" onchange="calculateTileRequirement()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-xs focus:outline-none focus:border-sky-500">
+                    <option value="5">+5% (To'g'ri terish)</option>
+                    <option value="10" selected>+10% (Standart qirqim)</option>
+                    <option value="15">+15% (Diagonal terish)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Calculation Results Card -->
+        <div class="p-3.5 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white space-y-2 shadow-inner">
+            <div class="flex justify-between items-center text-xs text-slate-300">
+                <span>Sof xona maydoni:</span>
+                <span id="calcNetArea" class="font-bold text-white">0 m²</span>
+            </div>
+            <div class="flex justify-between items-center text-xs text-slate-300">
+                <span>Zapas bilan hisoblangan qutilar:</span>
+                <span id="calcBoxesCount" class="font-bold text-amber-400 text-sm">0 quti</span>
+            </div>
+            <div class="flex justify-between items-center text-xs text-slate-300 pt-1.5 border-t border-slate-700">
+                <span>Xarid maydoni:</span>
+                <span id="calcFinalArea" class="font-black text-emerald-400 text-base">0 m²</span>
+            </div>
+            <div class="flex justify-between items-center text-xs text-slate-300">
+                <span>Taxminiy jami summa:</span>
+                <span id="calcTotalCost" class="font-black text-white text-base">0 so'm</span>
+            </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="flex items-center gap-2.5 pt-1">
+            <button onclick="closeTileCalculator()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                Bekor qilish
+            </button>
+            <button onclick="applyCalculatorResult()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 px-4 rounded-xl text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
+                <i class="fa-solid fa-cart-plus"></i>
+                <span>Savatga Qo'shish</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- FULLSCREEN TILE IMAGE MODAL (LIGHTBOX) -->
+<div id="tileImageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" onclick="closeTileImageModal()">
+    <div class="relative max-w-2xl max-h-[85vh] bg-white rounded-2xl overflow-hidden p-2 shadow-2xl flex flex-col items-center" onclick="event.stopPropagation()">
+        <button type="button" onclick="closeTileImageModal()" class="absolute top-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center transition shadow text-sm z-10">&times;</button>
+        <img id="tileModalImg" src="" class="max-h-[75vh] max-w-full object-contain rounded-xl">
+    </div>
+</div>
+
+<!-- KASSA & CHECKOUT MODAL (UNIFIED POS) -->
+<div id="checkoutModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/80">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg shadow-2xs border border-emerald-200/70">
+                    <i class="fa-solid fa-cash-register"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-base leading-tight">Kassa - To'lov Qabul Qilish & Nakladnoy</h3>
+                    <p class="text-[11px] text-slate-400">Mijozni tanlang, to'lov turini belgilang va tasdiqlang</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeCheckoutModal()" class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xl transition font-bold leading-none">&times;</button>
+        </div>
+
+        <!-- Modal Body: 2 Columns on desktop -->
+        <div class="p-4 sm:p-5 max-h-[75vh] overflow-y-auto bg-slate-50/30">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                
+                <!-- Left Col (6 cols): Order Items & Discounts -->
+                <div class="lg:col-span-6 space-y-3">
+                    <div class="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-2xs space-y-2.5">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span class="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-layer-group text-sky-600"></i>
+                                <span>Sotilayotgan Kafellar Ro'yxati</span>
+                            </span>
+                        </div>
+
+                        <!-- Table of items -->
+                        <div class="overflow-x-auto max-h-48 overflow-y-auto pr-1">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 text-slate-400 uppercase text-[9px] font-bold tracking-wider sticky top-0">
+                                    <tr>
+                                        <th class="py-1.5 px-2">Kafel</th>
+                                        <th class="py-1.5 px-2 text-center">Miqdori</th>
+                                        <th class="py-1.5 px-2 text-right">Summa</th>
+                                        <th class="py-1.5 px-1 text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kassaTableBody" class="divide-y divide-slate-100">
+                                    <!-- Injected by renderKassaPage() -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Subtotal and Discount Breakdown -->
+                        <div class="pt-2 border-t border-slate-100 space-y-1.5 text-xs">
+                            <div class="flex justify-between items-center text-slate-500 font-medium">
+                                <span>Oraliq summa:</span>
+                                <span id="kassaSubtotal" class="font-bold text-slate-800 font-mono">0 so'm</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-500 font-medium">
+                                <span>Chegirma (Skidka):</span>
+                                <span id="discountDisplay" class="font-bold text-emerald-600 font-mono">0 so'm</span>
+                            </div>
+                            <div class="flex justify-between items-baseline pt-1.5 border-t border-slate-100">
+                                <span class="text-xs font-black text-slate-800 uppercase">Jami To'lov:</span>
+                                <div class="text-right">
+                                    <span id="kassaTotalSum" class="text-2xl font-black text-slate-900 font-mono">0</span>
+                                    <span class="text-xs font-bold text-slate-500">so'm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chegirma (Discount) Fast Selector -->
+                        <div class="pt-2 border-t border-slate-100">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Mijoz uchun Chegirma:</span>
+                            <div class="grid grid-cols-4 gap-1.5 text-xs font-black">
+                                <button type="button" onclick="applyDiscount(0)" class="py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">0%</button>
+                                <button type="button" onclick="applyDiscount(3)" class="py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition">3%</button>
+                                <button type="button" onclick="applyDiscount(5)" class="py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition">5%</button>
+                                <button type="button" onclick="applyDiscount(10)" class="py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition">10%</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Col (6 cols): Customer & Payment Method -->
+                <div class="lg:col-span-6 space-y-3">
+                    <!-- Customer Details Card -->
+                    <div class="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-2xs space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-user text-sky-600"></i>
+                                <span>Mijoz Ma'lumotlari</span>
+                            </span>
+                            <div class="flex items-center gap-1">
+                                <button type="button" onclick="document.getElementById('customerName').value='Usta / Prorab'" class="text-[9px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded transition">+ Usta</button>
+                                <button type="button" onclick="document.getElementById('customerName').value='Doimiy Xaridor'" class="text-[9px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded transition">+ Doimiy</button>
+                                <button type="button" onclick="document.getElementById('customerName').value='Yangi Mijoz'" class="text-[9px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded transition">+ Yangi</button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="relative">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Mijoz Ismi / Tashkilot *</label>
+                                <input type="text" id="customerName" oninput="searchCustomersForKassa(this.value)" autocomplete="off" placeholder="Ism kiriting yoki bazadan qidiring..." class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 font-medium">
+                                <input type="hidden" id="customerId" value="">
+                                <div id="customerSearchDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-30 max-h-40 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Telefon Raqami</label>
+                                <input type="tel" id="customerPhone" placeholder="+998 90 123 45 67" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 font-mono">
+                            </div>
+                            
+                            <!-- Biriktirilgan Usta / Prorab -->
+                            <div class="pt-2 border-t border-slate-100 space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-[10px] font-bold text-amber-700 uppercase flex items-center space-x-1">
+                                        <i class="fa-solid fa-helmet-safety text-amber-500"></i>
+                                        <span>Olib Kelgan Usta / Prorab (KPI)</span>
+                                    </label>
+                                    <button type="button" onclick="openQuickAddUstaModal()" class="text-[9px] font-bold text-sky-600 hover:text-sky-800 transition flex items-center space-x-0.5">
+                                        <i class="fa-solid fa-plus text-[8px]"></i>
+                                        <span>Yangi Usta</span>
+                                    </button>
+                                </div>
+                                <div class="relative">
+                                    <input type="text" id="ustaSearchInput" oninput="searchUstalarForKassa(this.value)" onfocus="searchUstalarForKassa(this.value)" autocomplete="off" placeholder="Ustani qidirish (ismi yoki telefoni)..." class="w-full px-3 py-1.5 text-xs bg-amber-50/50 border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500 font-medium">
+                                    <input type="hidden" id="checkoutUstaId" value="">
+                                    <div id="ustaSearchDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-30 max-h-40 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                                </div>
+                                <div id="selectedUstaBadge" class="hidden flex items-center justify-between p-1.5 px-2.5 rounded-lg bg-amber-100/80 border border-amber-300 text-xs text-amber-950">
+                                    <div class="flex items-center space-x-1.5 truncate">
+                                        <span class="text-xs">👷</span>
+                                        <span id="selectedUstaName" class="font-bold"></span>
+                                        <span id="selectedUstaPhone" class="text-[10px] text-amber-700 font-mono"></span>
+                                    </div>
+                                    <button type="button" onclick="clearSelectedUsta()" class="text-amber-800 hover:text-rose-600 font-black text-sm ml-2 leading-none" title="Ustani o'chirish">&times;</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method Card -->
+                    <div class="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-2xs space-y-2.5">
+                        <span class="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                            <i class="fa-solid fa-wallet text-sky-600"></i>
+                            <span>To'lov Usuli</span>
+                        </span>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="paymentMethod" value="naqd" checked class="peer hidden" onchange="togglePaymentInputs('naqd')">
+                                <div class="py-2 px-1 rounded-xl border-2 border-slate-200 bg-slate-50 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 text-center transition">
+                                    <i class="fa-solid fa-money-bill-wave text-base text-emerald-600 mb-0.5 block"></i>
+                                    <span class="block text-[11px] font-black text-slate-800">Naqd</span>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer">
+                                <input type="radio" name="paymentMethod" value="karta" class="peer hidden" onchange="togglePaymentInputs('karta')">
+                                <div class="py-2 px-1 rounded-xl border-2 border-slate-200 bg-slate-50 peer-checked:border-blue-500 peer-checked:bg-blue-50 text-center transition">
+                                    <i class="fa-regular fa-credit-card text-base text-blue-600 mb-0.5 block"></i>
+                                    <span class="block text-[11px] font-black text-slate-800">Karta</span>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer">
+                                <input type="radio" name="paymentMethod" value="nasiya" class="peer hidden" onchange="togglePaymentInputs('nasiya')">
+                                <div class="py-2 px-1 rounded-xl border-2 border-slate-200 bg-slate-50 peer-checked:border-amber-500 peer-checked:bg-amber-50 text-center transition">
+                                    <i class="fa-solid fa-hand-holding-dollar text-base text-amber-600 mb-0.5 block"></i>
+                                    <span class="block text-[11px] font-black text-slate-800">Nasiya</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Naqd Pul Calculator Block -->
+                        <div id="cashCalcBlock" class="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-[10px] font-bold text-emerald-900 uppercase">Berilgan Pul (so'm)</label>
+                                <button type="button" onclick="document.getElementById('cashGivenInput').value=''; calcChange();" class="text-[9px] font-bold text-emerald-700 hover:text-emerald-900">Tozalash</button>
+                            </div>
+                            <input type="number" id="cashGivenInput" oninput="calcChange()" placeholder="Masalan: 1 500 000" class="w-full px-3 py-1.5 text-sm font-black bg-white border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <div class="grid grid-cols-3 gap-1 text-[9px] font-bold">
+                                <button type="button" onclick="setFastCash(50000)" class="py-1 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded border border-emerald-200 transition">+50 000</button>
+                                <button type="button" onclick="setFastCash(100000)" class="py-1 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded border border-emerald-200 transition">+100 000</button>
+                                <button type="button" onclick="setFastCash(200000)" class="py-1 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded border border-emerald-200 transition">+200 000</button>
+                                <button type="button" onclick="setFastCash(500000)" class="py-1 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded border border-emerald-200 transition">+500 000</button>
+                                <button type="button" onclick="setFastCash(1000000)" class="py-1 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded border border-emerald-200 transition">+1 000 000</button>
+                                <button type="button" onclick="setExactCash()" class="py-1 px-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded transition font-black">Aniq Summa</button>
+                            </div>
+                            <div class="flex justify-between items-baseline pt-1 text-xs border-t border-emerald-200/60">
+                                <span class="text-emerald-800 font-semibold text-[11px]">Qaytim:</span>
+                                <span id="cashChangeOutput" class="text-xs font-black text-emerald-900">0 so'm</span>
+                            </div>
+                        </div>
+
+                        <!-- Nasiya Calculator Block -->
+                        <div id="nasiyaCalcBlock" class="hidden p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-2">
+                            <div class="flex items-center space-x-1.5 text-amber-900 font-bold text-[11px]">
+                                <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                                <span>Nasiyaga (Qarzga) rasmiylashtirish</span>
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-600 uppercase mb-0.5">Avans (oldindan to'lov, so'm):</label>
+                                <input type="number" id="nasiyaAdvanceInput" value="0" step="1000" min="0" oninput="calcNasiyaDebt()" class="w-full px-3 py-1.5 text-xs font-black bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono">
+                            </div>
+                            <div class="p-2 rounded-lg bg-white border border-amber-200 flex justify-between items-baseline text-xs">
+                                <span class="text-slate-600 font-bold text-[11px]">Qarz summasi:</span>
+                                <span id="nasiyaDebtOutput" class="text-xs font-black text-rose-600 font-mono">0 so'm</span>
+                            </div>
+                            <p class="text-[9px] text-amber-800 leading-tight">
+                                * Ushbu summa mijozning Nasiya Qarz daftariga yoziladi.
+                            </p>
+                        </div>
+
+                        <!-- Cashier Note -->
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Kassir Izohi (Ixtiyoriy)</label>
+                            <input type="text" id="cashierNote" placeholder="Izoh yoki kelishuv..." class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex items-center justify-between gap-3 px-5 py-3.5 bg-white border-t border-slate-200">
+            <button type="button" onclick="closeCheckoutModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+                Bekor qilish
+            </button>
+            <button type="button" id="payNowBtn" onclick="submitPayment()" class="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-circle-check text-base"></i>
+                <span id="payBtnText">TO'LOV QILINDI (Tasdiqlash)</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Add Usta Modal -->
+<div id="quickAddUstaModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 p-5 space-y-4 animate-in fade-in zoom-in-95">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-helmet-safety"></i>
+                </div>
+                <h3 class="font-black text-slate-900 text-sm">Yangi Usta Qo'shish</h3>
+            </div>
+            <button type="button" onclick="closeQuickAddUstaModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold">&times;</button>
+        </div>
+        <div class="space-y-3 text-xs">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Usta / Prorab F.I.Sh *</label>
+                <input type="text" id="quickUstaName" placeholder="Masalan: Sardor Usta" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-medium">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Telefon Raqami</label>
+                <input type="tel" id="quickUstaPhone" placeholder="+998 90 123 45 67" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-mono">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Qo'shimcha Izoh</label>
+                <input type="text" id="quickUstaNotes" placeholder="Masalan: Yunusobod brigadasi" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500">
+            </div>
+        </div>
+        <div class="flex items-center space-x-2 pt-2">
+            <button type="button" onclick="closeQuickAddUstaModal()" class="flex-1 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition">
+                Bekor qilish
+            </button>
+            <button type="button" onclick="submitQuickAddUsta()" class="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition">
+                Saqlash
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openTileImageModal(src) {
+    if (!src) return;
+    const m = document.getElementById('tileImageModal');
+    const img = document.getElementById('tileModalImg');
+    if (m && img) {
+        img.src = src;
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+    }
+}
+function closeTileImageModal() {
+    const m = document.getElementById('tileImageModal');
+    if (m) {
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+    }
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeTileImageModal();
+});
+</script>
+<script src="/static/js/scanner.js"></script>
+<script src="/static/js/pos.js"></script>
+{% endblock %}

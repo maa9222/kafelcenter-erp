@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+
+{% block title %}Boshqaruv Paneli{% endblock %}
+
+{% block content %}
+<div class="space-y-7">
+    <!-- Top Welcome & Quick Actions Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 rounded-3xl text-white shadow-xl relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute right-40 -top-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        
+        <div class="relative z-10">
+            <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-sky-400 mb-1">
+                <i class="fa-solid fa-gem"></i>
+                <span>Premium Kafel Boshqaruvi</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black tracking-tight">KafelCenter Tizim Paneli</h1>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+                Do'kon zaxiralari, real-time savdolar tahlili va ombor logistikasi nazorati.
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 relative z-10">
+            <a href="/kpi" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-4 py-2.5 rounded-2xl shadow-lg shadow-amber-500/25 transition transform hover:-translate-y-0.5 text-xs sm:text-sm">
+                <i class="fa-solid fa-trophy text-base text-slate-900"></i>
+                <span>Xodimlar KPI</span>
+            </a>
+            <a href="/hisobot" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white font-black px-4 py-2.5 rounded-2xl shadow-lg border border-slate-700 transition transform hover:-translate-y-0.5 text-xs sm:text-sm">
+                <i class="fa-solid fa-file-shield text-base text-sky-400"></i>
+                <span>Audit</span>
+            </a>
+            <a href="/sotuv" class="inline-flex items-center space-x-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black px-4 py-2.5 rounded-2xl shadow-lg shadow-sky-500/25 transition transform hover:-translate-y-0.5 text-xs sm:text-sm">
+                <i class="fa-solid fa-qrcode text-base"></i>
+                <span>Showroom & QR Sotuv</span>
+            </a>
+            <a href="/ombor/yangi" class="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-2.5 rounded-2xl shadow-lg shadow-emerald-600/20 transition transform hover:-translate-y-0.5 text-xs sm:text-sm">
+                <i class="fa-solid fa-plus text-base"></i>
+                <span>Kafel Kirim</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 4 Bento KPI Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <!-- 1. Kafel Markalari -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 card-hover flex items-center justify-between relative overflow-hidden">
+            <div class="space-y-1">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Kafel Turlari</span>
+                <p class="text-3xl font-black text-slate-900 tracking-tight">{{ prod_stats.total_types or 0 }} <span class="text-xs font-semibold text-slate-400">marka</span></p>
+                <a href="/ombor" class="text-xs font-bold text-sky-600 hover:text-sky-700 inline-flex items-center space-x-1 pt-1">
+                    <span>Omborni ko'rish</span>
+                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </a>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500/15 to-sky-500/5 text-sky-600 flex items-center justify-center text-xl border border-sky-200/50">
+                <i class="fa-solid fa-shapes"></i>
+            </div>
+        </div>
+
+        <!-- 2. Ombor Zaxirasi -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 card-hover flex items-center justify-between relative overflow-hidden">
+            <div class="space-y-1">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Mavjud Zaxira</span>
+                <p class="text-3xl font-black text-slate-900 tracking-tight">{{ "%.1f"|format(prod_stats.total_stock or 0) }} <span class="text-xs font-semibold text-slate-400">m²</span></p>
+                <span class="text-[11px] text-emerald-600 font-bold inline-flex items-center">
+                    <i class="fa-solid fa-circle-check mr-1 text-[10px]"></i> Hisobda mavjud
+                </span>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 text-emerald-600 flex items-center justify-center text-xl border border-emerald-200/50">
+                <i class="fa-solid fa-warehouse"></i>
+            </div>
+        </div>
+
+        <!-- 3. Bugungi Savdo -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 card-hover flex items-center justify-between relative overflow-hidden">
+            <div class="space-y-1">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Bugungi Tushum</span>
+                <p class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ "{:,.0f}".format(today_stats.total_sales or 0).replace(",", " ") }} <span class="text-xs font-semibold text-slate-400">so'm</span></p>
+                <span class="text-[11px] text-slate-500 font-bold block">
+                    {{ today_stats.orders_count or 0 }} ta xarid amalga oshdi
+                </span>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 text-amber-600 flex items-center justify-center text-xl border border-amber-200/50">
+                <i class="fa-solid fa-sack-dollar"></i>
+            </div>
+        </div>
+
+        <!-- 4. Kutayotgan Nakladnoylar -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 card-hover flex items-center justify-between relative overflow-hidden">
+            <div class="space-y-1">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Ombor Yuk Berishi</span>
+                <p class="text-3xl font-black {% if pending_nakladnoy > 0 %}text-rose-600 animate-pulse{% else %}text-slate-900{% endif %} tracking-tight">
+                    {{ pending_nakladnoy or 0 }} <span class="text-xs font-semibold text-slate-400">buyurtma</span>
+                </p>
+                <a href="/nakladnoylar?status=tolandi" class="text-xs font-bold text-rose-600 hover:text-rose-700 inline-flex items-center space-x-1">
+                    <span>Yuk berishga o'tish</span>
+                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </a>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500/15 to-rose-500/5 text-rose-600 flex items-center justify-center text-xl border border-rose-200/50">
+                <i class="fa-solid fa-truck-ramp-box"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Charts Grid (Chart.js) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 7-Day Sales Trend (8 Cols) -->
+        <div class="lg:col-span-8 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="font-black text-slate-900 text-base flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-line text-sky-600"></i>
+                        <span>Savdo Dinamikasi (Oxirgi 7 kun)</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Kunlik tushumlar hajmining o'zgarishi</p>
+                </div>
+                <span class="text-xs font-bold bg-sky-50 text-sky-700 px-3 py-1 rounded-xl border border-sky-100">
+                    Jonli hisobot
+                </span>
+            </div>
+            <div class="h-64 sm:h-72 w-full">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Payment Method Breakdown (4 Cols) -->
+        <div class="lg:col-span-4 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-black text-slate-900 text-base flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-pie text-emerald-600"></i>
+                        <span>To'lov Turlari</span>
+                    </h3>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">Naqd pul va karta orqali to'lovlar nisbati</p>
+                <div class="h-48 relative flex items-center justify-center">
+                    <canvas id="paymentChart"></canvas>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="flex items-center space-x-2 font-medium text-slate-600">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                        <span>Naqd Pul:</span>
+                    </span>
+                    <span class="font-black text-slate-900">{{ "{:,.0f}".format(payment_stats.naqd).replace(",", " ") }} so'm</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="flex items-center space-x-2 font-medium text-slate-600">
+                        <span class="w-3 h-3 rounded-full bg-sky-500"></span>
+                        <span>Plastik Karta:</span>
+                    </span>
+                    <span class="font-black text-slate-900">{{ "{:,.0f}".format(payment_stats.karta).replace(",", " ") }} so'm</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Selling Tiles & Low Stock Alert Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Top Selling Tiles (7 Cols) -->
+        <div class="lg:col-span-7 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="font-black text-slate-900 text-base flex items-center space-x-2">
+                        <i class="fa-solid fa-fire text-amber-500"></i>
+                        <span>Eng Xaridorgir Kafellar (Top sotuv)</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Eng ko'p maydonda sotilgan kafel modellari</p>
+                </div>
+                <a href="/ombor" class="text-xs font-bold text-sky-600 hover:text-sky-700">Katalog &rarr;</a>
+            </div>
+
+            {% if top_products %}
+            <div class="space-y-3">
+                {% for tp in top_products %}
+                <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-sky-50/50 transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs {% if loop.index == 1 %}bg-amber-400 text-amber-950{% elif loop.index == 2 %}bg-slate-300 text-slate-800{% elif loop.index == 3 %}bg-amber-700/30 text-amber-900{% else %}bg-slate-200 text-slate-700{% endif %}">
+                            #{{ loop.index }}
+                        </div>
+                        <div>
+                            <h4 class="font-black text-xs sm:text-sm text-slate-900 leading-snug">{{ tp.brand }} - {{ tp.model_name }}</h4>
+                            <span class="text-[11px] text-slate-400 font-medium">{{ tp.size }}</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-black text-sm text-slate-900 block">{{ "%.1f"|format(tp.total_qty) }} m²</span>
+                        <span class="text-[11px] font-bold text-emerald-600">{{ "{:,.0f}".format(tp.total_revenue).replace(",", " ") }} so'm</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12 text-slate-400">
+                <i class="fa-solid fa-chart-simple text-4xl mb-2 text-slate-300"></i>
+                <p class="text-xs">Savdolar amalga oshirilishi bilan bu yerda yetakchi kafellar ko'rinadi.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Low Stock Alert (5 Cols) -->
+        <div class="lg:col-span-5 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-black text-slate-900 text-base flex items-center space-x-2">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+                        <span>Kam Qolgan Kafellar</span>
+                    </h3>
+                    <span class="text-xs font-black px-2.5 py-1 rounded-xl bg-rose-100 text-rose-800">{{ low_stock }} ta kafel</span>
+                </div>
+
+                {% if low_stock_items %}
+                <div class="space-y-3">
+                    {% for item in low_stock_items %}
+                    <div class="p-3 rounded-2xl bg-rose-50/70 border border-rose-200/60 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-11 h-11 rounded-xl bg-white overflow-hidden border border-rose-200 flex-shrink-0">
+                                {% if item.image_path %}
+                                    <img src="{{ item.image_path }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    <div class="w-full h-full flex items-center justify-center text-slate-400 text-[10px]">Rasm</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-xs text-slate-900 leading-tight">{{ item.brand }} {{ item.model_name }}</h4>
+                                <span class="text-[11px] text-slate-500">{{ item.size }}</span>
+                                <div class="text-[11px] font-black text-rose-600 mt-0.5">
+                                    Qoldiq: {{ item.quantity_in_stock }} {{ item.unit }} (Min: {{ item.min_quantity }})
+                                </div>
+                            </div>
+                        </div>
+                        <a href="/ombor/tahrirlash/{{ item.id }}" class="text-xs bg-white hover:bg-rose-100 text-rose-700 font-bold px-3 py-1.5 rounded-xl border border-rose-300 transition shadow-sm">
+                            + Kirim
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-12 text-slate-400">
+                    <i class="fa-solid fa-circle-check text-emerald-500 text-4xl mb-2"></i>
+                    <p class="text-xs font-semibold text-slate-600">Barcha kafellar yetarli miqdorda!</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Omborda kritik kamaygan kafellar mavjud emas.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 text-right">
+                <a href="/ombor?status=low" class="text-xs font-bold text-slate-500 hover:text-slate-800">
+                    Barcha kam qolganlarni saralash &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sales Table -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="font-black text-slate-900 text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-clock-rotate-left text-sky-600"></i>
+                    <span>So'nggi Savdolar va Nakladnoylar</span>
+                </h3>
+                <p class="text-xs text-slate-400">Yaqinda amalga oshirilgan to'lovlar va ularning ombordagi holati</p>
+            </div>
+            <a href="/nakladnoylar" class="text-xs font-bold text-sky-600 hover:text-sky-700">Barchasini ko'rish &rarr;</a>
+        </div>
+
+        {% if recent_orders %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                    <tr>
+                        <th class="py-3 px-3 rounded-l-xl">Nakladnoy №</th>
+                        <th class="py-3 px-3">Xaridor</th>
+                        <th class="py-3 px-3">Summa</th>
+                        <th class="py-3 px-3">To'lov Usuli</th>
+                        <th class="py-3 px-3">Holati</th>
+                        <th class="py-3 px-3 rounded-r-xl text-right">Harakatlar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for ord in recent_orders %}
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-3 font-mono font-bold text-slate-900">
+                            <a href="/nakladnoy/{{ ord.id }}" class="hover:text-sky-600">{{ ord.order_number }}</a>
+                            <span class="block text-[10px] text-slate-400 font-sans font-normal">{{ ord.created_at }}</span>
+                        </td>
+                        <td class="py-3 px-3 text-slate-700 font-medium">
+                            <span class="font-bold text-slate-900 block">{{ ord.customer_name or 'Mijoz' }}</span>
+                            {% if ord.customer_phone %}<span class="text-[11px] text-slate-400 font-mono">{{ ord.customer_phone }}</span>{% endif %}
+                        </td>
+                        <td class="py-3 px-3 font-black text-slate-900">
+                            {{ "{:,.0f}".format(ord.total_amount).replace(",", " ") }} so'm
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-black {% if ord.payment_method == 'naqd' %}bg-emerald-100 text-emerald-800{% elif ord.payment_method == 'karta' %}bg-blue-100 text-blue-800{% else %}bg-purple-100 text-purple-800{% endif %}">
+                                {{ ord.payment_method|capitalize }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-3">
+                            {% if ord.status == 'tolandi' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-800 animate-pulse">
+                                    <i class="fa-solid fa-hourglass-half mr-1 text-[10px]"></i> Yuk berilishi kerak
+                                </span>
+                            {% elif ord.status == 'yuk_berildi' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
+                                    <i class="fa-solid fa-check mr-1 text-[10px]"></i> Yuk berildi
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                                    {{ ord.status }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-3 text-right space-x-1">
+                            <a href="/nakladnoy/{{ ord.id }}" class="text-xs bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-800 font-bold px-2.5 py-1.5 rounded-xl transition inline-flex items-center space-x-1" title="Nakladnoyni ko'rish">
+                                <i class="fa-solid fa-eye text-[11px]"></i>
+                                <span>Ko'rish</span>
+                            </a>
+                            <a href="/nakladnoy/{{ ord.id }}/chek" target="_blank" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2.5 py-1.5 rounded-xl transition inline-flex items-center space-x-1" title="80mm kassa cheki">
+                                <i class="fa-solid fa-receipt text-[11px]"></i>
+                                <span>Chek</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-10 text-slate-400">
+            <i class="fa-solid fa-receipt text-3xl mb-2 text-slate-300"></i>
+            <p class="text-xs">Hozircha savdolar mavjud emas.</p>
+            <a href="/sotuv" class="text-sky-600 font-bold text-xs mt-2 inline-block">Sotuv bo'limiga o'tish &rarr;</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 1. Sales Dynamics Line Chart
+    const salesLabels = {{ sales_chart_labels|tojson }};
+    const salesData = {{ sales_chart_data|tojson }};
+    
+    const ctxSales = document.getElementById('salesChart').getContext('2d');
+    const salesGradient = ctxSales.createLinearGradient(0, 0, 0, 300);
+    salesGradient.addColorStop(0, 'rgba(2, 132, 199, 0.35)');
+    salesGradient.addColorStop(1, 'rgba(2, 132, 199, 0.00)');
+
+    new Chart(ctxSales, {
+        type: 'line',
+        data: {
+            labels: salesLabels,
+            datasets: [{
+                label: "Savdo hajmi (so'm)",
+                data: salesData,
+                borderColor: '#0284c7',
+                borderWidth: 3,
+                backgroundColor: salesGradient,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#0284c7',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ' ' + Number(context.raw).toLocaleString('ru-RU') + " so'm";
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        callback: function(val) {
+                            if (val >= 1000000) return (val / 1000000).toFixed(1) + ' mln';
+                            if (val >= 1000) return (val / 1000).toFixed(0) + ' ming';
+                            return val;
+                        },
+                        font: { size: 10 }
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11, weight: 'bold' } }
+                }
+            }
+        }
+    });
+
+    // 2. Payment Distribution Doughnut Chart
+    const naqdVal = {{ payment_stats.naqd }};
+    const kartaVal = {{ payment_stats.karta }};
+    const hasData = (naqdVal + kartaVal) > 0;
+
+    const ctxPay = document.getElementById('paymentChart').getContext('2d');
+    new Chart(ctxPay, {
+        type: 'doughnut',
+        data: {
+            labels: ['Naqd Pul', 'Plastik Karta'],
+            datasets: [{
+                data: hasData ? [naqdVal, kartaVal] : [1, 0],
+                backgroundColor: hasData ? ['#10b981', '#0284c7'] : ['#e2e8f0', '#cbd5e1'],
+                borderWidth: 2,
+                borderColor: '#ffffff',
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ' ' + Number(context.raw).toLocaleString('ru-RU') + " so'm";
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

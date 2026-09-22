@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment and secrets
+.env
+.secret_key
+
+# SQLite journal & WAL
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Test databases
+test_*.db
+test_*.db-journal
+test_*.db-wal
+test_*.db-shm
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

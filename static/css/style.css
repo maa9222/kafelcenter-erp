@@ -1,0 +1,270 @@
+/* Custom App Styles */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+    --primary-blue: #0284c7;
+    --primary-dark: #0f172a;
+    --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --terracotta-clay: #ea580c;
+    --terracotta-warm: #f97316;
+    --sand-accent: #fef3c7;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
+    -webkit-font-smoothing: antialiased;
+}
+
+.font-mono {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Warm terracotta & luxury showroom accents */
+.bg-terracotta {
+    background-color: #ea580c;
+}
+.text-terracotta {
+    color: #ea580c;
+}
+.border-terracotta {
+    border-color: #f97316;
+}
+
+.ceramic-gradient {
+    background: linear-gradient(135deg, #ea580c 0%, #f97316 50%, #f59e0b 100%);
+}
+
+.badge-terracotta {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #ffedd5;
+}
+
+/* Subtle glassmorphism */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Modern Card Interactions */
+.card-hover {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.09), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+}
+
+/* Scanner Laser Animation */
+.laser-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #38bdf8, #38bdf8, transparent);
+    box-shadow: 0 0 16px 3px #38bdf8;
+    animation: laserScan 2.2s infinite ease-in-out;
+    pointer-events: none;
+    z-index: 20;
+}
+
+@keyframes laserScan {
+    0% {
+        top: 6%;
+        opacity: 0.9;
+    }
+    50% {
+        top: 92%;
+        opacity: 1;
+    }
+    100% {
+        top: 6%;
+        opacity: 0.9;
+    }
+}
+
+/* Scanner Pulse Corner Markers */
+.scan-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: #38bdf8;
+    pointer-events: none;
+}
+.scan-corner-tl { top: 12px; left: 12px; border-top: 3px solid; border-left: 3px solid; border-top-left-radius: 6px; }
+.scan-corner-tr { top: 12px; right: 12px; border-top: 3px solid; border-right: 3px solid; border-top-right-radius: 6px; }
+.scan-corner-bl { bottom: 12px; left: 12px; border-bottom: 3px solid; border-left: 3px solid; border-bottom-left-radius: 6px; }
+.scan-corner-br { bottom: 12px; right: 12px; border-bottom: 3px solid; border-right: 3px solid; border-bottom-right-radius: 6px; }
+
+/* Toast Notifications Container */
+#toastContainer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 380px;
+    width: calc(100% - 40px);
+    pointer-events: none;
+}
+
+.toast-item {
+    pointer-events: auto;
+    padding: 14px 18px;
+    border-radius: 16px;
+    background: #0f172af2;
+    backdrop-filter: blur(12px);
+    color: #ffffff;
+    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.35);
+    display: flex;
+    items-center: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: all 0.3s ease;
+}
+
+.toast-item.toast-success {
+    border-left: 4px solid #10b981;
+}
+.toast-item.toast-danger {
+    border-left: 4px solid #f43f5e;
+}
+.toast-item.toast-info {
+    border-left: 4px solid #38bdf8;
+}
+.toast-item.toast-warning {
+    border-left: 4px solid #f59e0b;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-16px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.toast-fadeOut {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+}
+
+/* Thermal receipt 80mm / 58mm style helper */
+.receipt-80mm {
+    width: 80mm;
+    margin: 0 auto;
+    font-family: 'JetBrains Mono', monospace, monospace;
+    font-size: 12px;
+    line-height: 1.35;
+    background: #fff;
+    color: #000;
+}
+
+/* Sidebar Styling & Transitions */
+#sidebar {
+    transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-collapsed #sidebar {
+    width: 4.75rem !important; /* ~76px */
+}
+
+.sidebar-collapsed #sidebar .sidebar-text,
+.sidebar-collapsed #sidebar .sidebar-heading,
+.sidebar-collapsed #sidebar .sidebar-badge,
+.sidebar-collapsed #sidebar .sidebar-user-details,
+.sidebar-collapsed #sidebar .sidebar-brand-text {
+    display: none !important;
+}
+
+.sidebar-collapsed #sidebar .sidebar-nav-item {
+    justify-content: center !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+.sidebar-collapsed #sidebar .sidebar-user-box {
+    justify-content: center !important;
+    padding: 0.5rem !important;
+}
+
+/* Print optimizations */
+@media print {
+    .no-print, #sidebar, #sidebarBackdrop, #topHeader, header, footer, nav {
+        display: none !important;
+    }
+    body, .app-layout-wrapper, .app-main-content {
+        overflow: visible !important;
+        height: auto !important;
+        display: block !important;
+        background: white !important;
+        color: black !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+}
+
+/* Mobile, Tablet & Touch Device Optimizations */
+.overflow-x-auto, .table-responsive {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+@media (max-width: 768px) {
+    /* Touch friendly minimum tap targets */
+    button, a.btn, input[type="button"], input[type="submit"] {
+        min-height: 38px;
+    }
+
+    /* Smoother table text on mobile */
+    table {
+        font-size: 11px;
+    }
+
+    th, td {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+}
+
+/* Horizontal scroll indicators for tables */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 4px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+

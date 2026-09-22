@@ -1,0 +1,19 @@
+[Unit]
+Description=KafelCenter ERP - Do'kon Ombor va Kassa Tizimi
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/kafel_magazin
+Environment="PATH=/var/www/kafel_magazin/venv/bin"
+Environment="FLASK_DEBUG=0"
+Environment="SHOW_DEMO_CREDENTIALS=0"
+ExecStart=/var/www/kafel_magazin/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 --timeout 120 --access-logfile /var/log/kafel/access.log --error-logfile /var/log/kafel/error.log wsgi:app
+
+# Agar server o'chib yonsa yoki xatolik bilan to'xtasa, 5 soniyada avtomatik qayta ishga tushadi
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

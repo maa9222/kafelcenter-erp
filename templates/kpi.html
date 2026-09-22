@@ -1,0 +1,1197 @@
+{% extends "base.html" %}
+
+{% block title %}KPI & Sotuv Reytingi - Kafel Center{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with Title and Period Filter Tabs -->
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">
+                <i class="fa-solid fa-trophy"></i>
+                <span>KPI, Reyting & Motivatsiya Tizimi</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
+                <span>KPI & Savdo Reytingi</span>
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">
+                Ustalar olib kelgan mijozlar, savdo aylanmasi va do'kon sotuvchilarining ko'rsatkichlari (<span class="font-bold text-slate-700">{{ period_title }}</span>)
+            </p>
+        </div>
+
+        <!-- Period Filter Pills: Bugun, 1 Oy, 3 Oy, 6 Oy, 1 Yil, Barcha Vaqt -->
+        <div class="flex flex-wrap items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-xs text-xs font-bold gap-1">
+            <a href="/kpi?period=today&rate={{ bonus_rate }}&usta_rate={{ usta_rate }}" class="px-3 py-1.5 rounded-xl transition {% if period == 'today' %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                Bugun
+            </a>
+            <a href="/kpi?period=1m&rate={{ bonus_rate }}&usta_rate={{ usta_rate }}" class="px-3 py-1.5 rounded-xl transition {% if period in ['1m', 'month', '1oy'] %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                ⭐ 1 Oy (30 kun)
+            </a>
+            <a href="/kpi?period=3m&rate={{ bonus_rate }}&usta_rate={{ usta_rate }}" class="px-3 py-1.5 rounded-xl transition {% if period in ['3m', '3oy'] %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                3 Oy (90 kun)
+            </a>
+            <a href="/kpi?period=6m&rate={{ bonus_rate }}&usta_rate={{ usta_rate }}" class="px-3 py-1.5 rounded-xl transition {% if period in ['6m', '6oy'] %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                6 Oy (180 kun)
+            </a>
+            <a href="/kpi?period=1y&rate={{ bonus_rate }}&usta_rate={{ usta_rate }}" class="px-3 py-1.5 rounded-xl transition {% if period in ['1y', '1yil', 'year'] %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                1 Yil (365 kun)
+            </a>
+            <a href="/kpi?period=all&rate={{ bonus_rate }}&usta_rate={{ usta_rate }}" class="px-3 py-1.5 rounded-xl transition {% if period == 'all' %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                Barcha Vaqt
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Tab Switcher: Ustalar Reytingi vs Do'kon Xodimlari & Add Usta Button -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2 bg-slate-200/70 p-1 rounded-2xl max-w-xl text-xs sm:text-sm font-black select-none">
+            <button type="button" id="tabBtnUstalar" onclick="switchKpiTab('ustalar')" class="flex-1 py-2.5 px-4 rounded-xl bg-white text-slate-900 shadow-xs transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-helmet-safety text-amber-500"></i>
+                <span>Ustalar & Prorablar Reytingi</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold ml-1">{{ usta_kpi_list|length }}</span>
+            </button>
+            <button type="button" id="tabBtnStaff" onclick="switchKpiTab('staff')" class="flex-1 py-2.5 px-4 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-users-gear text-sky-600"></i>
+                <span>Do'kon Xodimlari KPI</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold ml-1">{{ seller_kpi_list|length }}</span>
+            </button>
+        </div>
+
+        <button type="button" onclick="openKpiAddUstaModal()" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs shadow-md shadow-amber-500/20 transition self-start sm:self-auto">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>+ Yangi Usta Qo'shish</span>
+        </button>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 1: USTALAR VA PRORABLAR REYTINGI (ACTIVE TAB)                     -->
+    <!-- ========================================================================= -->
+    <div id="tabContentUstalar" class="space-y-6">
+
+        <!-- 4 Bento KPI Stats Cards for Ustalar -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- 1. Top Usta / 1-O'rin -->
+            <div class="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-white rounded-3xl p-5 shadow-xs border border-amber-300/80 flex items-center justify-between relative overflow-hidden">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-black text-amber-800 uppercase tracking-wider block flex items-center space-x-1">
+                        <span>🥇 Yetakchi Lider Usta</span>
+                    </span>
+                    {% if top_usta %}
+                    <p class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate max-w-[170px]" title="{{ top_usta.usta.full_name }}">
+                        {{ top_usta.usta.full_name }}
+                    </p>
+                    <span class="text-[11px] font-bold text-amber-700 block">
+                        👥 {{ top_usta.clients_count }} ta mijoz &bull; {{ "{:,.0f}".format(top_usta.total_revenue).replace(",", " ") }} so'm
+                    </span>
+                    {% else %}
+                    <p class="text-base font-bold text-slate-400">Ma'lumot yo'q</p>
+                    <span class="text-[11px] text-slate-400">Bu davrda usta savdosi yo'q</span>
+                    {% endif %}
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center text-xl shadow-md shadow-amber-500/30 flex-shrink-0">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+            </div>
+
+            <!-- 2. Jami Ustalar Olib Kelgan Mijozlar -->
+            <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Jalb Qilingan Mijozlar</span>
+                    <p class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        {{ total_usta_clients }} <span class="text-xs font-semibold text-slate-400">nafar mijoz</span>
+                    </p>
+                    <span class="text-[11px] text-sky-600 font-bold inline-flex items-center">
+                        <i class="fa-solid fa-receipt mr-1"></i> {{ total_usta_orders }} ta amalga oshirilgan chek
+                    </span>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl border border-sky-100 flex-shrink-0">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+            </div>
+
+            <!-- 3. Ustalar Orqali Savdo Aylanmasi -->
+            <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Ustalar Savdo Aylanmasi</span>
+                    <p class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        {{ "{:,.0f}".format(total_usta_revenue).replace(",", " ") }} <span class="text-xs font-semibold text-slate-400">so'm</span>
+                    </p>
+                    <span class="text-[11px] text-emerald-600 font-bold inline-flex items-center">
+                        <i class="fa-solid fa-cubes mr-1"></i> {{ "%.1f"|format(total_usta_sqm) }} m² kafel hajmi
+                    </span>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl border border-emerald-100 flex-shrink-0">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                </div>
+            </div>
+
+            <!-- 4. Hisoblangan Usta Bonusi / Keshbek -->
+            <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Bonus Jamg'armasi (<span id="currentUstaRateLabel">{{ usta_rate }}%</span>)</span>
+                    <p id="totalUstaBonusLabel" class="text-xl sm:text-2xl font-black text-indigo-900 tracking-tight">
+                        {{ "{:,.0f}".format(total_usta_bonus).replace(",", " ") }} <span class="text-xs font-semibold text-slate-400">so'm</span>
+                    </p>
+                    <span class="text-[11px] text-indigo-600 font-bold inline-flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Ustalarga to'lanadigan ulush
+                    </span>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl border border-indigo-100 flex-shrink-0">
+                    <i class="fa-solid fa-gift"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOP 3 USTA PODIUM (Oltin, Kumush, Bronza Kuboklari) -->
+        {% if usta_kpi_list|length >= 1 and (usta_kpi_list[0].clients_count > 0 or usta_kpi_list[0].total_revenue > 0) %}
+        <div class="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-slate-700">
+            <!-- Background Glow Effect -->
+            <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="text-center max-w-md mx-auto mb-8 relative z-10">
+                <span class="text-xs uppercase font-black tracking-widest text-amber-400 block mb-1">
+                    🏆 PODIUM VA ENG FAOL USTALAR
+                </span>
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                    Davr Liderlari Shoxsupasi
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">
+                    Eng ko'p xaridor olib kelgan va eng yuqori savdo hajmini bajargan ustalarning eng yaxshi uchligi
+                </p>
+            </div>
+
+            <!-- 3 Columns Podium Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 items-end relative z-10 max-w-4xl mx-auto">
+                
+                <!-- 2-O'rin (KUMUSH) -->
+                {% if usta_kpi_list|length >= 2 and (usta_kpi_list[1].clients_count > 0 or usta_kpi_list[1].total_revenue > 0) %}
+                {% set u2 = usta_kpi_list[1] %}
+                <div class="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 border border-slate-600/80 text-center space-y-3 order-2 md:order-1 transition hover:border-slate-400">
+                    <div class="relative inline-block mx-auto">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-slate-400 to-slate-200 text-slate-900 font-black text-2xl flex items-center justify-center shadow-lg mx-auto">
+                            🥈
+                        </div>
+                        <span class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-300 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">2-O'rin</span>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-base text-white truncate" title="{{ u2.usta.full_name }}">{{ u2.usta.full_name }}</h3>
+                        <p class="text-[11px] text-slate-400 font-mono">{{ u2.usta.phone or 'Tel kiritilmagan' }}</p>
+                    </div>
+                    <div class="bg-slate-900/60 rounded-xl p-2.5 space-y-1 text-xs">
+                        <div class="flex justify-between text-slate-400 font-medium">
+                            <span>Mijozlar:</span>
+                            <span class="text-white font-bold">{{ u2.clients_count }} nafar</span>
+                        </div>
+                        <div class="flex justify-between text-slate-400 font-medium">
+                            <span>Savdo:</span>
+                            <span class="text-emerald-400 font-black">{{ "{:,.0f}".format(u2.total_revenue).replace(",", " ") }} s.</span>
+                        </div>
+                        <div class="flex justify-between text-slate-400 font-medium">
+                            <span>Kafel hajmi:</span>
+                            <span class="text-sky-400 font-bold">{{ "%.1f"|format(u2.total_sqm) }} m²</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="viewUstaDetails({{ u2.usta.id }})" class="w-full py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-list-check text-[10px]"></i>
+                        <span>Mijozlar tarixi</span>
+                    </button>
+                </div>
+                {% else %}
+                <div class="hidden md:block order-2 md:order-1"></div>
+                {% endif %}
+
+                <!-- 1-O'rin (OLTIN - ELEVATED CENTER) -->
+                {% set u1 = usta_kpi_list[0] %}
+                <div class="bg-gradient-to-b from-amber-500/20 via-slate-800/90 to-slate-800 rounded-3xl p-6 border-2 border-amber-400 text-center space-y-4 order-1 md:order-2 shadow-2xl relative transition hover:scale-105 duration-300">
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-[10px] tracking-wider px-3 py-1 rounded-full uppercase shadow-md flex items-center space-x-1">
+                        <i class="fa-solid fa-crown text-xs"></i>
+                        <span>BOSH CHEMPION</span>
+                    </div>
+
+                    <div class="relative inline-block mx-auto pt-2">
+                        <div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-500 via-amber-300 to-amber-200 text-slate-950 font-black text-3xl flex items-center justify-center shadow-xl mx-auto shadow-amber-500/40">
+                            🥇
+                        </div>
+                        <span class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 text-xs font-black px-2.5 py-0.5 rounded-full uppercase">1-O'rin</span>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-lg sm:text-xl text-white truncate" title="{{ u1.usta.full_name }}">{{ u1.usta.full_name }}</h3>
+                        <p class="text-xs text-amber-300 font-mono">{{ u1.usta.phone or 'Tel kiritilmagan' }}</p>
+                    </div>
+                    <div class="bg-slate-900/80 rounded-2xl p-3 space-y-1.5 text-xs border border-amber-500/30">
+                        <div class="flex justify-between text-slate-300 font-medium">
+                            <span>Olib kelgan mijozlari:</span>
+                            <span class="text-amber-400 font-black text-sm">{{ u1.clients_count }} nafar</span>
+                        </div>
+                        <div class="flex justify-between text-slate-300 font-medium">
+                            <span>Savdo summasi:</span>
+                            <span class="text-emerald-400 font-black text-sm">{{ "{:,.0f}".format(u1.total_revenue).replace(",", " ") }} so'm</span>
+                        </div>
+                        <div class="flex justify-between text-slate-300 font-medium">
+                            <span>Kafel hajmi:</span>
+                            <span class="text-sky-400 font-bold">{{ "%.1f"|format(u1.total_sqm) }} m²</span>
+                        </div>
+                        <div class="flex justify-between text-slate-300 font-medium pt-1 border-t border-slate-800">
+                            <span>Hisoblangan bonus:</span>
+                            <span class="text-amber-300 font-black">{{ "{:,.0f}".format(u1.bonus_amount).replace(",", " ") }} so'm</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="viewUstaDetails({{ u1.usta.id }})" class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition shadow-md shadow-amber-500/30 flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-eye"></i>
+                        <span>Mijozlari & Cheklarini Ko'rish</span>
+                    </button>
+                </div>
+
+                <!-- 3-O'rin (BRONZA) -->
+                {% if usta_kpi_list|length >= 3 and (usta_kpi_list[2].clients_count > 0 or usta_kpi_list[2].total_revenue > 0) %}
+                {% set u3 = usta_kpi_list[2] %}
+                <div class="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 border border-amber-900/60 text-center space-y-3 order-3 transition hover:border-amber-700">
+                    <div class="relative inline-block mx-auto">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-700 to-amber-600 text-amber-100 font-black text-2xl flex items-center justify-center shadow-lg mx-auto">
+                            🥉
+                        </div>
+                        <span class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-700 text-amber-100 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">3-O'rin</span>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-base text-white truncate" title="{{ u3.usta.full_name }}">{{ u3.usta.full_name }}</h3>
+                        <p class="text-[11px] text-slate-400 font-mono">{{ u3.usta.phone or 'Tel kiritilmagan' }}</p>
+                    </div>
+                    <div class="bg-slate-900/60 rounded-xl p-2.5 space-y-1 text-xs">
+                        <div class="flex justify-between text-slate-400 font-medium">
+                            <span>Mijozlar:</span>
+                            <span class="text-white font-bold">{{ u3.clients_count }} nafar</span>
+                        </div>
+                        <div class="flex justify-between text-slate-400 font-medium">
+                            <span>Savdo:</span>
+                            <span class="text-emerald-400 font-black">{{ "{:,.0f}".format(u3.total_revenue).replace(",", " ") }} s.</span>
+                        </div>
+                        <div class="flex justify-between text-slate-400 font-medium">
+                            <span>Kafel hajmi:</span>
+                            <span class="text-sky-400 font-bold">{{ "%.1f"|format(u3.total_sqm) }} m²</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="viewUstaDetails({{ u3.usta.id }})" class="w-full py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-list-check text-[10px]"></i>
+                        <span>Mijozlar tarixi</span>
+                    </button>
+                </div>
+                {% else %}
+                <div class="hidden md:block order-3"></div>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Interactive Bonus Rate Fast Selector for Ustalar -->
+        <div class="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-white rounded-3xl p-5 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-lg shadow-sm">
+                    <i class="fa-solid fa-percent"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm">Ustalarga Bonus / Keshbek Stavkasi</h3>
+                    <p class="text-xs text-slate-500">Mijoz olib kelgan ustaga savdo aylanmasidan beriladigan rag'batlantirish foizi</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-xs font-bold text-slate-600">Stavka:</span>
+                <div class="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-2xs text-xs font-bold">
+                    <button type="button" onclick="changeUstaRate(1.0)" class="rate-btn-usta px-3 py-1 rounded-lg transition {% if usta_rate == 1.0 %}bg-amber-500 text-white font-black{% else %}text-slate-700 hover:bg-slate-100{% endif %}">1%</button>
+                    <button type="button" onclick="changeUstaRate(2.0)" class="rate-btn-usta px-3 py-1 rounded-lg transition {% if usta_rate == 2.0 %}bg-amber-500 text-white font-black{% else %}text-slate-700 hover:bg-slate-100{% endif %}">2%</button>
+                    <button type="button" onclick="changeUstaRate(3.0)" class="rate-btn-usta px-3 py-1 rounded-lg transition {% if usta_rate == 3.0 %}bg-amber-500 text-white font-black{% else %}text-slate-700 hover:bg-slate-100{% endif %}">3%</button>
+                    <button type="button" onclick="changeUstaRate(5.0)" class="rate-btn-usta px-3 py-1 rounded-lg transition {% if usta_rate == 5.0 %}bg-amber-500 text-white font-black{% else %}text-slate-700 hover:bg-slate-100{% endif %}">5%</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Table for Ustalar -->
+        <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-black text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-ranking-star text-amber-500"></i>
+                        <span>Ustalar va Prorablar KPI Reyting Jadvali</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Saralash mezoni: Birinchi navbatda <b>ko'p mijoz olib kelganiga</b>, so'ng <b>savdo aylanmasiga</b> qarab aniqlangan
+                    </p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-semibold text-slate-400">Jami: {{ usta_kpi_list|length }} nafar usta</span>
+                    <button type="button" onclick="openKpiAddUstaModal()" class="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow-sm transition">
+                        <i class="fa-solid fa-user-plus text-[11px]"></i>
+                        <span>+ Yangi Usta</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Instant Live Search Bar for Table -->
+            <div class="relative">
+                <input type="text" id="ustaTableSearch" oninput="filterUstaTable(this.value)" placeholder="Usta ismi yoki telefoni bo'yicha qidirish..." class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-medium transition">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse" id="ustaLeaderboardTable">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 uppercase font-black text-[10px] tracking-wider border-b border-slate-200">
+                            <th class="py-3 px-3 text-center w-14">O'rin</th>
+                            <th class="py-3 px-3">Usta / Prorab F.I.Sh</th>
+                            <th class="py-3 px-3 text-center bg-amber-50/70 text-amber-950 font-black">
+                                <i class="fa-solid fa-users text-amber-600 mr-1"></i> Olib Kelgan Klientlari
+                            </th>
+                            <th class="py-3 px-3 text-right font-black">Jami Savdo (so'm)</th>
+                            <th class="py-3 px-3 text-right">Kafel Hajmi</th>
+                            <th class="py-3 px-3 text-center">Cheklar Soni</th>
+                            <th class="py-3 px-3 text-right">O'rtacha Chek</th>
+                            <th class="py-3 px-3 text-right bg-indigo-50/70 text-indigo-950 font-black">
+                                <i class="fa-solid fa-gift text-indigo-600 mr-1"></i> Hisoblangan Bonus
+                            </th>
+                            <th class="py-3 px-3">Eng Ko'p Olingan Kafel</th>
+                            <th class="py-3 px-3 text-center">Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% if usta_kpi_list %}
+                            {% for u in usta_kpi_list %}
+                            <tr class="usta-row hover:bg-amber-50/30 transition {% if u.rank == 1 and (u.clients_count > 0 or u.total_revenue > 0) %}bg-amber-50/20{% endif %}" data-name="{{ u.usta.full_name|lower }}" data-phone="{{ u.usta.phone or '' }}">
+                                <!-- Rank / Medal -->
+                                <td class="py-3.5 px-3 text-center">
+                                    {% if u.rank == 1 and (u.clients_count > 0 or u.total_revenue > 0) %}
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-amber-100 text-amber-800 font-black text-base shadow-2xs">
+                                        🥇
+                                    </span>
+                                    {% elif u.rank == 2 and (u.clients_count > 0 or u.total_revenue > 0) %}
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-slate-700 font-black text-base">
+                                        🥈
+                                    </span>
+                                    {% elif u.rank == 3 and (u.clients_count > 0 or u.total_revenue > 0) %}
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-amber-50 text-amber-800 font-black text-base">
+                                        🥉
+                                    </span>
+                                    {% else %}
+                                    <span class="font-mono font-bold text-slate-400 text-xs">#{{ u.rank }}</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Usta details -->
+                                <td class="py-3.5 px-3">
+                                    <div class="flex items-center space-x-2.5">
+                                        <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white bg-gradient-to-br from-amber-500 to-orange-600 flex-shrink-0 shadow-2xs">
+                                            {{ u.usta.full_name[:2].upper() }}
+                                        </div>
+                                        <div>
+                                            <span class="font-black text-slate-900 text-sm block">{{ u.usta.full_name }}</span>
+                                            <div class="flex items-center space-x-1.5 text-[10px] text-slate-400 font-mono">
+                                                <span>{{ u.usta.phone or 'Tel kiritilmagan' }}</span>
+                                                <span>&bull;</span>
+                                                <span class="uppercase font-bold text-amber-600">{{ u.usta.customer_type }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Clients Count (Primary metric) -->
+                                <td class="py-3.5 px-3 text-center bg-amber-50/40">
+                                    <span class="inline-block px-3 py-1 rounded-xl bg-amber-500 text-white text-xs font-black shadow-2xs">
+                                        {{ u.clients_count }} ta mijoz
+                                    </span>
+                                </td>
+
+                                <!-- Total Revenue (Secondary metric) -->
+                                <td class="py-3.5 px-3 text-right">
+                                    <span class="text-sm font-black text-slate-900 block font-mono">
+                                        {{ "{:,.0f}".format(u.total_revenue).replace(",", " ") }}
+                                    </span>
+                                    <span class="text-[10px] text-slate-400">so'm</span>
+                                </td>
+
+                                <!-- Sqm -->
+                                <td class="py-3.5 px-3 text-right">
+                                    <span class="text-xs font-bold text-sky-700 block font-mono">
+                                        {{ "%.2f"|format(u.total_sqm) }} m²
+                                    </span>
+                                </td>
+
+                                <!-- Orders Count -->
+                                <td class="py-3.5 px-3 text-center">
+                                    <span class="inline-block px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold font-mono">
+                                        {{ u.orders_count }} ta
+                                    </span>
+                                </td>
+
+                                <!-- Average Check -->
+                                <td class="py-3.5 px-3 text-right font-mono font-medium text-slate-600">
+                                    {{ "{:,.0f}".format(u.avg_check).replace(",", " ") }} s.
+                                </td>
+
+                                <!-- Bonus Amount -->
+                                <td class="py-3.5 px-3 text-right bg-indigo-50/40">
+                                    <span class="text-sm font-black text-indigo-900 block font-mono usta-bonus" data-revenue="{{ u.total_revenue }}">
+                                        {{ "{:,.0f}".format(u.bonus_amount).replace(",", " ") }} so'm
+                                    </span>
+                                    <span class="text-[9px] text-indigo-500 font-bold block current-usta-rate-sublabel">{{ usta_rate }}% ulush</span>
+                                </td>
+
+                                <!-- Top Tile -->
+                                <td class="py-3.5 px-3 font-medium text-slate-600 text-[11px]">
+                                    {{ u.top_tile }}
+                                </td>
+
+                                <!-- Actions: View Orders/Clients -->
+                                <td class="py-3.5 px-3 text-center">
+                                    <button type="button" onclick="viewUstaDetails({{ u.usta.id }})" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 font-bold text-xs transition border border-slate-200 flex items-center justify-center space-x-1 mx-auto" title="Ushbu usta olib kelgan mijozlar va cheklarni ko'rish">
+                                        <i class="fa-solid fa-list-check text-amber-500 text-[11px]"></i>
+                                        <span>Mijozlari</span>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="10" class="py-8 text-center text-slate-400">
+                                    <p class="font-bold">Usta yoki prorablar topilmadi.</p>
+                                    <p class="text-xs mt-1">Mijozlar bo'limidan yoki kassa to'lov oynasidan usta biriktirishingiz mumkin.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Ustalar Comparison Chart (Chart.js) -->
+        <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-black text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-column text-amber-500"></i>
+                        <span>Ustalar Natijadorligi Grafik Tahlili</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Top ustalarning keltirgan mijozlari soni va yaratgan savdo tushumi taqqoslamasi</p>
+                </div>
+            </div>
+            <div class="relative h-72 sm:h-80 w-full">
+                <canvas id="ustaKpiChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 2: DO'KON XODIMLARI KPI (SOTUVCHILAR & OMBORCHILAR)                -->
+    <!-- ========================================================================= -->
+    <div id="tabContentStaff" class="hidden space-y-6">
+
+        <!-- 4 Bento KPI Stats Cards for Staff -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- 1. Top Performer / 1-O'rin -->
+            <div class="bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-white rounded-3xl p-5 shadow-xs border border-sky-200 flex items-center justify-between relative overflow-hidden">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-sky-700 uppercase tracking-wider block flex items-center space-x-1">
+                        <span>🥇 Do'kon Lideri</span>
+                    </span>
+                    {% if top_performer %}
+                    <p class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate max-w-[160px]" title="{{ top_performer.user.full_name }}">
+                        {{ top_performer.user.full_name }}
+                    </p>
+                    <span class="text-[11px] font-bold text-sky-600 block">
+                        {{ "{:,.0f}".format(top_performer.total_revenue).replace(",", " ") }} so'm &bull; {{ "%.1f"|format(top_performer.total_sqm) }} m²
+                    </span>
+                    {% else %}
+                    <p class="text-lg font-bold text-slate-400">Sotuvlar yo'q</p>
+                    <span class="text-[11px] text-slate-400">Bu davrda hali savdo yo'q</span>
+                    {% endif %}
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center text-xl shadow-md shadow-sky-600/30 flex-shrink-0">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+            </div>
+
+            <!-- 2. Jami Savdo Tushumi -->
+            <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Jami Savdo Tushumi</span>
+                    <p class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        {{ "{:,.0f}".format(total_team_revenue).replace(",", " ") }} <span class="text-xs font-semibold text-slate-400">so'm</span>
+                    </p>
+                    <span class="text-[11px] text-emerald-600 font-bold inline-flex items-center">
+                        <i class="fa-solid fa-check-circle mr-1"></i> {{ total_team_orders }} ta muvaffaqiyatli savdo
+                    </span>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl border border-emerald-100 flex-shrink-0">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                </div>
+            </div>
+
+            <!-- 3. Sotilgan Kafel Hajmi -->
+            <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Sotilgan Kafel Hajmi</span>
+                    <p class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        {{ "%.2f"|format(total_team_sqm) }} <span class="text-xs font-semibold text-slate-400">m²</span>
+                    </p>
+                    <span class="text-[11px] text-sky-600 font-bold inline-flex items-center">
+                        <i class="fa-solid fa-cubes mr-1"></i> Jamoa natijasi
+                    </span>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl border border-sky-100 flex-shrink-0">
+                    <i class="fa-solid fa-shapes"></i>
+                </div>
+            </div>
+
+            <!-- 4. Hisoblangan Bonus Jamg'armasi -->
+            <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+                <div class="space-y-1">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Xodimlar Bonusi (<span id="currentRateLabel">{{ bonus_rate }}%</span>)</span>
+                    <p id="totalBonusPoolLabel" class="text-xl sm:text-2xl font-black text-indigo-900 tracking-tight">
+                        {{ "{:,.0f}".format(total_bonus_pool).replace(",", " ") }} <span class="text-xs font-semibold text-slate-400">so'm</span>
+                    </p>
+                    <span class="text-[11px] text-indigo-600 font-bold inline-flex items-center">
+                        <i class="fa-solid fa-gift mr-1"></i> Motivatsiya jamg'armasi
+                    </span>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl border border-indigo-100 flex-shrink-0">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seller KPI Leaderboard Table -->
+        <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-black text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-ranking-star text-sky-600"></i>
+                        <span>Sotuvchilar Reytingi va KPI Ko'rsatkichlari</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Har bir sotuvchining amalga oshirgan savdo hajmi, sotilgan kafellari va hisoblangan bonusi
+                    </p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-semibold text-slate-400">Jami: {{ seller_kpi_list|length }} nafar sotuvchi</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 uppercase font-black text-[10px] tracking-wider border-b border-slate-200">
+                            <th class="py-3 px-3 text-center w-14">O'rin</th>
+                            <th class="py-3 px-3">Xodim (F.I.SH & Rol)</th>
+                            <th class="py-3 px-3 text-center">Cheklar Soni</th>
+                            <th class="py-3 px-3 text-right">Sotilgan Kafel</th>
+                            <th class="py-3 px-3 text-right">Jami Tushum (so'm)</th>
+                            <th class="py-3 px-3 text-center w-36">Jamoa Ulushi (%)</th>
+                            <th class="py-3 px-3 text-right">O'rtacha Chek</th>
+                            <th class="py-3 px-3 text-right bg-indigo-50/60 text-indigo-950 border-l border-indigo-100">
+                                <i class="fa-solid fa-gift text-indigo-600 mr-1"></i> Hisoblangan Bonus
+                            </th>
+                            <th class="py-3 px-3">Eng Ko'p Sotgan Kafeli</th>
+                            <th class="py-3 px-3 text-center">Bahosi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for seller in seller_kpi_list %}
+                        <tr class="hover:bg-slate-50/80 transition {% if seller.rank == 1 and seller.total_revenue > 0 %}bg-sky-50/20{% endif %}">
+                            <td class="py-4 px-3 text-center">
+                                {% if seller.rank == 1 and seller.total_revenue > 0 %}
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-amber-100 text-amber-800 font-black text-base shadow-2xs">🥇</span>
+                                {% elif seller.rank == 2 and seller.total_revenue > 0 %}
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-slate-700 font-black text-base">🥈</span>
+                                {% elif seller.rank == 3 and seller.total_revenue > 0 %}
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-amber-50 text-amber-700 font-black text-base">🥉</span>
+                                {% else %}
+                                <span class="font-mono font-bold text-slate-400 text-xs">#{{ seller.rank }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-4 px-3">
+                                <div class="flex items-center space-x-2.5">
+                                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs text-white {% if seller.user.role == 'admin' %}bg-amber-500{% else %}bg-sky-500{% endif %} flex-shrink-0 shadow-2xs">
+                                        {{ seller.user.full_name[:1].upper() }}
+                                    </div>
+                                    <div>
+                                        <span class="font-black text-slate-900 text-sm block">{{ seller.user.full_name }}</span>
+                                        <div class="flex items-center space-x-2 text-[10px] text-slate-400 font-mono">
+                                            <span>@{{ seller.user.username }}</span>
+                                            <span>&bull;</span>
+                                            <span class="capitalize font-semibold {% if seller.user.role == 'admin' %}text-amber-600{% else %}text-sky-600{% endif %}">{{ seller.user.role }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-3 text-center font-bold text-slate-700">
+                                <span class="inline-block px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-mono font-bold">{{ seller.orders_count }} ta</span>
+                            </td>
+                            <td class="py-4 px-3 text-right">
+                                <span class="text-sm font-black text-sky-700 block font-mono">{{ "%.2f"|format(seller.total_sqm) }} m²</span>
+                            </td>
+                            <td class="py-4 px-3 text-right">
+                                <span class="text-base font-black text-slate-900 block font-mono">{{ "{:,.0f}".format(seller.total_revenue).replace(",", " ") }}</span>
+                                <span class="text-[10px] text-slate-400">so'm</span>
+                            </td>
+                            <td class="py-4 px-3">
+                                <div class="space-y-1">
+                                    <div class="flex items-center justify-between text-[11px] font-bold">
+                                        <span class="text-slate-600">{{ "%.1f"|format(seller.share_percent) }}%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <div class="bg-gradient-to-r from-sky-500 to-indigo-600 h-2 rounded-full transition-all duration-500" style="width: {{ seller.share_percent }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-3 text-right font-mono font-medium text-slate-600">
+                                {{ "{:,.0f}".format(seller.avg_check).replace(",", " ") }} s.
+                            </td>
+                            <td class="py-4 px-3 text-right bg-indigo-50/40 border-l border-indigo-100">
+                                <span class="text-sm font-black text-indigo-900 block font-mono seller-bonus" data-revenue="{{ seller.total_revenue }}">
+                                    {{ "{:,.0f}".format(seller.bonus_amount).replace(",", " ") }} so'm
+                                </span>
+                                <span class="text-[9px] text-indigo-500 font-bold block current-rate-sublabel">{{ bonus_rate }}% bonus</span>
+                            </td>
+                            <td class="py-4 px-3 font-medium text-slate-600 text-[11px]">
+                                {{ seller.top_tile }}
+                            </td>
+                            <td class="py-4 px-3 text-center">
+                                <span class="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold bg-{{ seller.tier_color }}-100 text-{{ seller.tier_color }}-800 border border-{{ seller.tier_color }}-200">
+                                    {{ seller.performance_tier }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Warehouse Logistics KPI Section -->
+        <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-black text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-boxes-packing text-amber-500"></i>
+                        <span>Omborxona Logistika & Yuk Berish KPI</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Omborchilar tomonidan tarqatilgan yuklar va qabul qilingan partiyalar hisoboti</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for w in warehouse_kpi_list %}
+                <div class="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between space-y-4 hover:border-slate-300 transition">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
+                                {{ w.user.full_name[:1].upper() }}
+                            </div>
+                            <div>
+                                <h3 class="font-black text-slate-900 text-sm">{{ w.user.full_name }}</h3>
+                                <span class="text-[10px] text-slate-400 font-mono">@{{ w.user.username }} &bull; Omborchi</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                            Faol
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+                        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-2xs space-y-0.5">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Yuk Berilgan Kafel:</span>
+                            <span class="text-base font-black text-emerald-700 font-mono block">{{ "%.2f"|format(w.dispatched_sqm) }} m²</span>
+                            <span class="text-[10px] text-slate-500">{{ w.dispatched_orders }} ta nakladnoy</span>
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-2xs space-y-0.5">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Qabul Qilingan Kirim:</span>
+                            <span class="text-base font-black text-sky-700 font-mono block">{{ "%.2f"|format(w.inbound_sqm) }} m²</span>
+                            <span class="text-[10px] text-slate-500">{{ w.inbound_operations }} ta kirim partiyasi</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Seller Comparison Chart (Chart.js) -->
+        <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-black text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-column text-sky-600"></i>
+                        <span>Sotuvchilar Reytingi Diagrammasi</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Xodimlar kesimida savdo tushumi va sotilgan kvadrat metrlar</p>
+                </div>
+            </div>
+            <div class="relative h-72 sm:h-80 w-full">
+                <canvas id="sellerKpiChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: USTANING MIJOZLARI VA AMALGA OSHIRILGAN SAVDOLARI                  -->
+<!-- ========================================================================= -->
+<div id="ustaDetailsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg shadow-2xs border border-amber-200">
+                    <i class="fa-solid fa-helmet-safety"></i>
+                </div>
+                <div>
+                    <h3 id="modalUstaName" class="font-black text-slate-900 text-base leading-tight">Usta Nomi</h3>
+                    <p id="modalUstaPhone" class="text-xs text-slate-400 font-mono">+998 00 000 00 00</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeUstaDetailsModal()" class="w-8 h-8 rounded-full bg-slate-200/70 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xl font-bold leading-none">&times;</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <!-- 4 Quick Stat Pills -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div class="bg-amber-50/70 border border-amber-200 p-3 rounded-2xl text-center">
+                    <span class="text-[10px] font-bold text-amber-800 uppercase block">Klientlar Soni</span>
+                    <span id="modalClientsCount" class="text-lg font-black text-amber-950">0</span>
+                </div>
+                <div class="bg-emerald-50/70 border border-emerald-200 p-3 rounded-2xl text-center">
+                    <span class="text-[10px] font-bold text-emerald-800 uppercase block">Jami Savdo</span>
+                    <span id="modalTotalRevenue" class="text-lg font-black text-emerald-950 font-mono">0</span>
+                </div>
+                <div class="bg-sky-50/70 border border-sky-200 p-3 rounded-2xl text-center">
+                    <span class="text-[10px] font-bold text-sky-800 uppercase block">Kafel Hajmi</span>
+                    <span id="modalTotalSqm" class="text-lg font-black text-sky-950 font-mono">0 m²</span>
+                </div>
+                <div class="bg-purple-50/70 border border-purple-200 p-3 rounded-2xl text-center">
+                    <span class="text-[10px] font-bold text-purple-800 uppercase block">Cheklar Soni</span>
+                    <span id="modalOrdersCount" class="text-lg font-black text-purple-950">0</span>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                <div class="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <span class="text-xs font-black text-slate-800 flex items-center space-x-1.5">
+                        <i class="fa-solid fa-receipt text-slate-400"></i>
+                        <span>Usta Orqali Amalga Oshirilgan Xaridlar</span>
+                    </span>
+                    <span id="modalPeriodBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700"></span>
+                </div>
+                <div class="overflow-x-auto max-h-64 overflow-y-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-400 uppercase text-[9px] font-bold tracking-wider sticky top-0 border-b border-slate-200">
+                            <tr>
+                                <th class="py-2 px-3">Chek №</th>
+                                <th class="py-2 px-3">Mijoz (Xaridor)</th>
+                                <th class="py-2 px-3">Kafellar</th>
+                                <th class="py-2 px-3 text-right">Hajmi (m²)</th>
+                                <th class="py-2 px-3 text-right">Summasi</th>
+                                <th class="py-2 px-3 text-center">Sana</th>
+                                <th class="py-2 px-3 text-center">Amal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalOrdersTableBody" class="divide-y divide-slate-100">
+                            <!-- Injected by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex items-center justify-end px-6 py-3.5 bg-slate-50 border-t border-slate-100">
+            <button type="button" onclick="closeUstaDetailsModal()" class="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition">
+                Yopish
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: YANGI USTA QO'SHISH (KPI SAHIFASIDAN TO'G'RIDAN-TO'G'RI) -->
+<div id="kpiAddUstaModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 p-5 space-y-4 animate-in fade-in zoom-in-95">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-helmet-safety"></i>
+                </div>
+                <h3 class="font-black text-slate-900 text-sm">Yangi Usta Qo'shish</h3>
+            </div>
+            <button type="button" onclick="closeKpiAddUstaModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold">&times;</button>
+        </div>
+        <div class="space-y-3 text-xs">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Usta / Prorab F.I.Sh *</label>
+                <input type="text" id="kpiUstaName" placeholder="Masalan: Sardor Usta" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-medium">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Telefon Raqami</label>
+                <input type="tel" id="kpiUstaPhone" placeholder="+998 90 123 45 67" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-mono">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Qo'shimcha Izoh</label>
+                <input type="text" id="kpiUstaNotes" placeholder="Masalan: Yunusobod brigadasi" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500">
+            </div>
+        </div>
+        <div class="flex items-center space-x-2 pt-2">
+            <button type="button" onclick="closeKpiAddUstaModal()" class="flex-1 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition">
+                Bekor qilish
+            </button>
+            <button type="button" id="kpiAddUstaSubmitBtn" onclick="submitKpiAddUsta()" class="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition">
+                Saqlash
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let currentPeriod = "{{ period }}";
+let currentBonusRate = {{ bonus_rate }};
+let currentUstaRate = {{ usta_rate }};
+
+// Usta qo'shish modalini ochish/yopish
+function openKpiAddUstaModal() {
+    const modal = document.getElementById('kpiAddUstaModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        const input = document.getElementById('kpiUstaName');
+        if (input) setTimeout(() => input.focus(), 100);
+    }
+}
+
+function closeKpiAddUpiModal() {
+    closeKpiAddUstaModal();
+}
+
+function closeKpiAddUstaModal() {
+    const modal = document.getElementById('kpiAddUstaModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+async function submitKpiAddUsta() {
+    const nameInput = document.getElementById('kpiUstaName');
+    const phoneInput = document.getElementById('kpiUstaPhone');
+    const notesInput = document.getElementById('kpiUstaNotes');
+    const submitBtn = document.getElementById('kpiAddUstaSubmitBtn');
+
+    const full_name = nameInput?.value?.trim();
+    const phone = phoneInput?.value?.trim();
+    const notes = notesInput?.value?.trim();
+
+    if (!full_name) {
+        alert("Iltimos, usta ismini kiriting!");
+        nameInput?.focus();
+        return;
+    }
+
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Saqlanmoqda...";
+        }
+        const res = await fetch("/api/ustalar/quick-add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ full_name, phone, notes })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert("✅ Yangi usta muvaffaqiyatli qo'shildi!");
+            window.location.reload();
+        } else {
+            alert("Xatolik: " + (data.message || "Usta qo'shilmadi"));
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Saqlash";
+            }
+        }
+    } catch (e) {
+        alert("Server bilan aloqa xatosi!");
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Saqlash";
+        }
+    }
+}
+
+// Tab switcher between Ustalar and Store Staff
+function switchKpiTab(tab) {
+    const btnUstalar = document.getElementById('tabBtnUstalar');
+    const btnStaff = document.getElementById('tabBtnStaff');
+    const secUstalar = document.getElementById('tabContentUstalar');
+    const secStaff = document.getElementById('tabContentStaff');
+
+    if (tab === 'ustalar') {
+        btnUstalar.className = 'flex-1 py-2.5 px-4 rounded-xl bg-white text-slate-900 shadow-xs transition flex items-center justify-center space-x-2';
+        btnStaff.className = 'flex-1 py-2.5 px-4 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center space-x-2';
+        secUstalar.classList.remove('hidden');
+        secStaff.classList.add('hidden');
+    } else {
+        btnStaff.className = 'flex-1 py-2.5 px-4 rounded-xl bg-white text-slate-900 shadow-xs transition flex items-center justify-center space-x-2';
+        btnUstalar.className = 'flex-1 py-2.5 px-4 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center space-x-2';
+        secStaff.classList.remove('hidden');
+        secUstalar.classList.add('hidden');
+    }
+}
+
+// Filter Usta table instantly
+function filterUstaTable(query) {
+    const q = (query || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('.usta-row');
+    rows.forEach(r => {
+        const name = r.getAttribute('data-name') || '';
+        const phone = r.getAttribute('data-phone') || '';
+        if (!q || name.includes(q) || phone.includes(q)) {
+            r.style.display = '';
+        } else {
+            r.style.display = 'none';
+        }
+    });
+}
+
+// Change Usta Rate dynamically
+function changeUstaRate(newRate) {
+    window.location.href = `/kpi?period=${currentPeriod}&rate=${currentBonusRate}&usta_rate=${newRate}`;
+}
+
+// Modal: View usta referrals and orders
+async function viewUstaDetails(ustaId) {
+    const modal = document.getElementById('ustaDetailsModal');
+    if (!modal) return;
+
+    try {
+        const res = await fetch(`/api/usta/${ustaId}/orders?period=${currentPeriod}`);
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('modalUstaName').innerText = data.usta.full_name;
+            document.getElementById('modalUstaPhone').innerText = data.usta.phone || 'Telefon raqam yo'q';
+            document.getElementById('modalClientsCount').innerText = data.summary.clients_count + ' nafar';
+            document.getElementById('modalTotalRevenue').innerText = Number(data.summary.total_revenue).toLocaleString('ru-RU') + ' s.';
+            document.getElementById('modalTotalSqm').innerText = Number(data.summary.total_sqm).toFixed(1) + ' m²';
+            document.getElementById('modalOrdersCount').innerText = data.summary.orders_count + ' ta';
+            document.getElementById('modalPeriodBadge').innerText = '{{ period_title }}';
+
+            const tbody = document.getElementById('modalOrdersTableBody');
+            if (data.orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Ushbu davrda xaridlar mavjud emas</td></tr>`;
+            } else {
+                let rowsHtml = '';
+                data.orders.forEach(o => {
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-2.5 px-3 font-mono font-bold text-slate-800">${o.order_number}</td>
+                            <td class="py-2.5 px-3">
+                                <span class="font-bold text-slate-900 block">${o.customer_name || 'Mijoz'}</span>
+                                <span class="text-[10px] text-slate-400 font-mono">${o.customer_phone || ''}</span>
+                            </td>
+                            <td class="py-2.5 px-3 text-[11px] text-slate-600 max-w-[180px] truncate" title="${o.tiles_summary || ''}">
+                                ${o.tiles_summary || '—'}
+                            </td>
+                            <td class="py-2.5 px-3 text-right font-mono font-bold text-sky-700">${Number(o.total_sqm).toFixed(1)} m²</td>
+                            <td class="py-2.5 px-3 text-right font-mono font-black text-slate-900">${Number(o.total_amount).toLocaleString('ru-RU')} s.</td>
+                            <td class="py-2.5 px-3 text-center text-[10px] text-slate-500 font-mono">${o.created_at.substring(0, 10)}</td>
+                            <td class="py-2.5 px-3 text-center">
+                                <a href="/nakladnoy/${o.id}" target="_blank" class="text-sky-600 hover:text-sky-800 font-bold" title="Nakladnoyni ko'rish">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = rowsHtml;
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        } else {
+            alert('Xatolik: ' + data.message);
+        }
+    } catch (e) {
+        alert('Ma'lumotlarni yuklab bo'lmadi!');
+    }
+}
+
+function closeUstaDetailsModal() {
+    const modal = document.getElementById('ustaDetailsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Chart.js initialization for both Ustalar and Staff
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Ustalar Chart
+    const ustaCtx = document.getElementById('ustaKpiChart');
+    if (ustaCtx) {
+        const ustaLabels = {{ usta_chart_labels|safe }};
+        const ustaClients = {{ usta_chart_clients|safe }};
+        const ustaRevenues = {{ usta_chart_revenues|safe }};
+
+        new Chart(ustaCtx, {
+            type: 'bar',
+            data: {
+                labels: ustaLabels,
+                datasets: [
+                    {
+                        label: 'Olib Kelgan Klientlari (nafar)',
+                        data: ustaClients,
+                        backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                        borderColor: '#d97706',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Savdo Tushumi (so'm)',
+                        data: ustaRevenues,
+                        backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                        borderColor: '#059669',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        ticks: {
+                            precision: 0,
+                            callback: function(val) { return val + ' ta'; }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Mijozlar soni',
+                            font: { size: 10, weight: 'bold' }
+                        },
+                        grid: { color: '#f1f5f9' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        ticks: {
+                            callback: function(val) {
+                                if (val >= 1000000) return (val / 1000000).toFixed(1) + ' mln';
+                                if (val >= 1000) return (val / 1000).toFixed(0) + ' ming';
+                                return val;
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Savdo summasi',
+                            font: { size: 10, weight: 'bold' }
+                        },
+                        grid: { drawOnChartArea: false }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { font: { weight: 'bold' } }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Staff Chart
+    const staffCtx = document.getElementById('sellerKpiChart');
+    if (staffCtx) {
+        const labels = {{ chart_labels|safe }};
+        const revenues = {{ chart_revenues|safe }};
+        const sqm = {{ chart_sqm|safe }};
+
+        new Chart(staffCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Sotuv Tushumi (so'm)',
+                        data: revenues,
+                        backgroundColor: 'rgba(2, 132, 199, 0.85)',
+                        borderRadius: 8,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Sotilgan Kafel (m²)',
+                        data: sqm,
+                        backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                        borderRadius: 8,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        ticks: {
+                            callback: function(val) {
+                                if (val >= 1000000) return (val / 1000000).toFixed(1) + ' mln';
+                                if (val >= 1000) return (val / 1000).toFixed(0) + ' ming';
+                                return val;
+                            }
+                        },
+                        grid: { color: '#f1f5f9' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        ticks: {
+                            callback: function(val) { return val + ' m²'; }
+                        },
+                        grid: { drawOnChartArea: false }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { font: { weight: 'bold' } }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

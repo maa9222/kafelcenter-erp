@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="uz" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>{% block title %}KafelCenter{% endblock %} - Kafel Savdo & Ombor Tizimi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <link rel="shortcut icon" href="/static/img/favicon.ico">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js for interactive analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block head_extra %}{% endblock %}
+</head>
+<body class="h-full overflow-hidden bg-slate-100 text-slate-800 flex font-sans antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- Mobile Drawer Backdrop Overlay -->
+    <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity"></div>
+
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 border-r border-slate-800 transform -translate-x-full lg:static lg:translate-x-0 shadow-2xl lg:shadow-none select-none">
+        <!-- Sidebar Brand / Header -->
+        <div class="h-16 px-4 flex items-center justify-between border-b border-slate-800/80 bg-slate-950/40 flex-shrink-0">
+            <a href="/" class="flex items-center space-x-3 group min-w-0">
+                <img src="/static/img/logo_icon.png" alt="Kafel Center Logo" class="w-10 h-10 object-contain flex-shrink-0 drop-shadow-md group-hover:scale-105 transition transform">
+                <div class="sidebar-brand-text truncate">
+                    <div class="flex items-center space-x-1.5">
+                        <span class="text-base font-black tracking-tight text-white">KAFEL<span class="text-sky-400">CENTER</span></span>
+                        <span class="text-[9px] font-extrabold uppercase bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded border border-sky-500/30">PRO</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-medium block">Kafel Markazi & Savdo</span>
+                </div>
+            </a>
+            <!-- Mobile Close Button -->
+            <button id="mobileSidebarClose" class="lg:hidden text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Sidebar Nav Links (Categorized) -->
+        <div class="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-3.5">
+            {% if current_user %}
+                
+                {# ================= ADMIN ROLE ================= #}
+                {% if current_user.role == 'admin' %}
+                <!-- Group: Asosiy Boshqaruv -->
+                <div class="space-y-0.5">
+                    <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                        Asosiy Boshqaruv
+                    </div>
+                    <a href="/" title="Boshqaruv Paneli" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/' %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-chart-pie text-base w-5 text-center {% if request.path == '/' %}text-white{% else %}text-sky-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Boshqaruv</span>
+                    </a>
+                    <a href="/kpi" title="Xodimlar KPI & Reyting" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/kpi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-trophy text-base w-5 text-center {% if request.path.startswith('/kpi') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text flex-1">KPI & Reyting</span>
+                        <span class="sidebar-badge text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Top</span>
+                    </a>
+                </div>
+
+                <!-- Group: Savdo & Kassa -->
+                <div class="space-y-0.5">
+                    <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                        Savdo & Kassa
+                    </div>
+                    <a href="/sotuv" title="Sotuv & Kassa (POS)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/sotuv', '/kassa'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-cash-register text-base w-5 text-center {% if request.path in ['/sotuv', '/kassa'] %}text-white{% else %}text-emerald-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Sotuv & Kassa (POS)</span>
+                    </a>
+                    <a href="/mijozlar" title="Mijozlar & Nasiya Daftari" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/mijozlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-users-viewfinder text-base w-5 text-center {% if request.path.startswith('/mijozlar') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Mijozlar & Nasiya</span>
+                    </a>
+                </div>
+
+                <!-- Group: Ombor & Logistika -->
+                <div class="space-y-0.5">
+                    <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                        Ombor & Logistika
+                    </div>
+                    <a href="/ombor" title="Ombor Qoldig'i" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-boxes-stacked text-base w-5 text-center {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}text-white{% else %}text-indigo-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Ombor Qoldig'i</span>
+                    </a>
+                    <a href="/ombor/yangi" title="Yangi Kafel Kirim Qilish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/yangi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-square-plus text-base w-5 text-center {% if request.path.startswith('/ombor/yangi') %}text-white{% else %}text-teal-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Kafel Kirim Qilish</span>
+                    </a>
+                    <a href="/ombor/siniqlar" title="Siniqlar & Brak Kafellar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/siniqlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-heart-crack text-base w-5 text-center {% if request.path.startswith('/ombor/siniqlar') %}text-white{% else %}text-rose-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Siniqlar & Brak</span>
+                    </a>
+                    <a href="/zavodlar" title="Kafel Zavodlari & Markalar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/zavodlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-industry text-base w-5 text-center {% if request.path.startswith('/zavodlar') %}text-white{% else %}text-cyan-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Zavodlar & Markalar</span>
+                    </a>
+                    <a href="/nakladnoylar" title="Nakladnoylar & Chiqarish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/nakladnoy') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-file-invoice text-base w-5 text-center {% if request.path.startswith('/nakladnoy') %}text-white{% else %}text-blue-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text flex-1">Nakladnoylar</span>
+                        {% if pending_nakladnoy_count and pending_nakladnoy_count > 0 %}
+                        <span class="sidebar-badge text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-slate-900 shadow-sm animate-pulse" title="{{ pending_nakladnoy_count }} ta yuk chiqarish kutilmoqda">
+                            {{ pending_nakladnoy_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </div>
+
+                <!-- Group: Nazorat & Xodimlar -->
+                <div class="space-y-0.5">
+                    <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                        Tizim Nazorati
+                    </div>
+                    <a href="/xarajatlar" title="Do'kon Xarajatlari & Chiqimlar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/xarajatlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-receipt text-base w-5 text-center {% if request.path.startswith('/xarajatlar') %}text-white{% else %}text-rose-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Do'kon Xarajatlari</span>
+                    </a>
+                    <a href="/hisobot" title="Audit & To'liq Hisobot" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-shield-halved text-base w-5 text-center {% if request.path in ['/hisobot', '/tarix'] %}text-white{% else %}text-purple-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Audit & Hisobot</span>
+                    </a>
+                    <a href="/admin/xodimlar" title="Xodimlar & Rollar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/admin/xodimlar' %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-users-gear text-base w-5 text-center {% if request.path == '/admin/xodimlar' %}text-white{% else %}text-pink-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Xodimlar</span>
+                    </a>
+                    <a href="/admin/ustalar" title="Ustalar & Prorablar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/admin/ustalar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-helmet-safety text-base w-5 text-center {% if request.path.startswith('/admin/ustalar') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Ustalar</span>
+                    </a>
+                </div>
+
+                {# ================= SOTUVCHI ROLE ================= #}
+                {% elif current_user.role == 'sotuvchi' %}
+                <!-- Group: Savdo & Kassir -->
+                <div class="space-y-0.5">
+                    <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                        Savdo Operatsiyalari
+                    </div>
+                    <a href="/sotuv" title="Sotuv & Kassa (POS)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/sotuv', '/kassa'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-cash-register text-base w-5 text-center {% if request.path in ['/sotuv', '/kassa'] %}text-white{% else %}text-emerald-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text font-bold">Sotuv & Kassa (POS)</span>
+                    </a>
+                </div>
+
+                <!-- Group: Shaxsiy & KPI -->
+                <div class="space-y-0.5">
+                    <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                        Mening Natijalarim
+                    </div>
+                    <a href="/kpi" title="Mening KPI & Bonusim" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/kpi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-trophy text-base w-5 text-center {% if request.path.startswith('/kpi') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text flex-1">Mening KPI & Bonus</span>
+                    </a>
+                    <a href="/hisobot" title="Mening Savdo Tarixim" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-clock-rotate-left text-base w-5 text-center {% if request.path in ['/hisobot', '/tarix'] %}text-white{% else %}text-purple-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Savdo Tarixi</span>
+                    </a>
+                </div>
+
+                {# ================= OMBORCHI ROLE ================= #}
+                {% elif current_user.role == 'omborchi' %}
+                <!-- Group: Ombor Operatsiyalari -->
+                <div class="space-y-0.5">
+                    <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                        Ombor & Yuk Tashish
+                    </div>
+                    <a href="/ombor" title="Ombor Qoldig'i" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-boxes-stacked text-base w-5 text-center {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}text-white{% else %}text-indigo-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Ombor Qoldig'i</span>
+                    </a>
+                    <a href="/ombor/yangi" title="Yangi Kafel Kirim Qilish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/yangi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-square-plus text-base w-5 text-center {% if request.path.startswith('/ombor/yangi') %}text-white{% else %}text-teal-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Kafel Kirim Qilish</span>
+                    </a>
+                    <a href="/ombor/siniqlar" title="Siniqlar & Brak Kafellar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/siniqlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-heart-crack text-base w-5 text-center {% if request.path.startswith('/ombor/siniqlar') %}text-white{% else %}text-rose-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Siniqlar & Brak</span>
+                    </a>
+                    <a href="/zavodlar" title="Kafel Zavodlari & Markalar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/zavodlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-industry text-base w-5 text-center {% if request.path.startswith('/zavodlar') %}text-white{% else %}text-cyan-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Zavodlar & Markalar</span>
+                    </a>
+                    <a href="/nakladnoylar" title="Nakladnoylar (Yuk Berish)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/nakladnoy') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-file-invoice text-base w-5 text-center {% if request.path.startswith('/nakladnoy') %}text-white{% else %}text-blue-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text flex-1">Nakladnoylar</span>
+                        {% if pending_nakladnoy_count and pending_nakladnoy_count > 0 %}
+                        <span class="sidebar-badge text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-slate-900 shadow-sm animate-pulse" title="{{ pending_nakladnoy_count }} ta yuk chiqarish kutilmoqda">
+                            {{ pending_nakladnoy_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </div>
+
+                <!-- Group: Jurnal & Shaxsiy -->
+                <div class="space-y-0.5">
+                    <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                        Jurnal & Hisobot
+                    </div>
+                    <a href="/hisobot" title="Kirim-Chiqim Jurnali" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                        <i class="fa-solid fa-clipboard-list text-base w-5 text-center {% if request.path in ['/hisobot', '/tarix'] %}text-white{% else %}text-emerald-400 group-hover:scale-110 transition-transform{% endif %}"></i>
+                        <span class="sidebar-text">Kirim-Chiqim Jurnali</span>
+                    </a>
+                </div>
+                {% endif %}
+
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Footer / Current User Profile Card -->
+        <div class="p-2.5 border-t border-slate-800/80 bg-slate-950/40 flex-shrink-0">
+            {% if current_user %}
+            <div class="sidebar-user-box flex items-center justify-between p-2 rounded-2xl bg-slate-800/50 border border-slate-700/60">
+                <div class="flex items-center space-x-2.5 min-w-0">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm text-white flex-shrink-0 shadow-sm {% if current_user.role == 'admin' %}bg-gradient-to-br from-amber-500 to-orange-600{% elif current_user.role == 'sotuvchi' %}bg-gradient-to-br from-sky-500 to-blue-600{% else %}bg-gradient-to-br from-emerald-500 to-teal-600{% endif %}">
+                        {{ current_user.full_name[:1].upper() }}
+                    </div>
+                    <div class="sidebar-user-details truncate">
+                        <span class="block text-xs font-bold text-white leading-tight truncate">{{ current_user.full_name }}</span>
+                        <span class="block text-[10px] font-semibold {% if current_user.role == 'admin' %}text-amber-400{% elif current_user.role == 'sotuvchi' %}text-sky-400{% else %}text-emerald-400{% endif %}">
+                            {% if current_user.role == 'admin' %}Super Admin{% elif current_user.role == 'sotuvchi' %}Sotuvchi{% else %}Omborchi{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <a href="/logout" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 w-8 h-8 rounded-xl flex items-center justify-center transition border border-transparent hover:border-rose-500/30 flex-shrink-0" title="Tizimdan chiqish">
+                    <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                </a>
+            </div>
+            {% else %}
+            <a href="/login" class="w-full flex items-center justify-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition shadow-md shadow-sky-600/20">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                <span class="sidebar-text">Tizimga Kirish</span>
+            </a>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- ==================== MAIN WORKSPACE AREA ==================== -->
+    <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-50 app-layout-wrapper">
+        
+        <!-- Slim Top Header -->
+        <header id="topHeader" class="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 z-30 shadow-xs">
+            <div class="flex items-center space-x-3 min-w-0">
+                <!-- Mobile Drawer Toggle -->
+                <button id="mobileSidebarToggle" class="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition focus:outline-none" title="Menyuni ochish">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+
+                <!-- Desktop Sidebar Collapse Toggle -->
+                <button id="desktopSidebarToggle" class="hidden lg:flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition border border-slate-200/60 focus:outline-none" title="Sidebar-ni yig'ish / ochish">
+                    <i class="fa-solid fa-bars-staggered text-sm"></i>
+                </button>
+
+                <!-- Current Page Title / Indicator -->
+                <div class="flex items-center space-x-2 truncate">
+                    {% if request.path == '/' %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+                            <span>Boshqaruv Paneli</span>
+                        </div>
+                    {% elif request.path.startswith('/ombor/yangi') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <a href="/ombor" class="text-slate-400 hover:text-slate-600 transition">Ombor</a>
+                            <span class="text-slate-300">/</span>
+                            <span>Yangi Kafel Kirim</span>
+                        </div>
+                    {% elif request.path.startswith('/zavodlar') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
+                            <span>Zavodlar & Ishlab Chiqaruvchi Markalar</span>
+                        </div>
+                    {% elif request.path.startswith('/ombor') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                            <span>Ombor Qoldig'i & Partiyalar</span>
+                        </div>
+                    {% elif request.path in ['/sotuv', '/kassa'] %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>Sotuv & Kassa (POS)</span>
+                        </div>
+                    {% elif request.path.startswith('/nakladnoy') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            <span>Nakladnoylar & Yuk Berish</span>
+                        </div>
+                    {% elif request.path.startswith('/kpi') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span>Xodimlar KPI & Reyting Tizimi</span>
+                        </div>
+                    {% elif request.path in ['/hisobot', '/tarix'] %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                            <span>Audit & Hisobot Jurnali</span>
+                        </div>
+                    {% elif request.path.startswith('/admin/ustalar') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span>Ustalar va Prorablar Boshqaruvi</span>
+                        </div>
+                    {% elif request.path.startswith('/admin/xodimlar') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-pink-500"></span>
+                            <span>Xodimlar Boshqaruvi</span>
+                        </div>
+                    {% else %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                            <span>KafelCenter ERP</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Top Header Right Actions -->
+            <div class="flex items-center space-x-2.5 sm:space-x-3">
+                {% if current_user %}
+                    {# Quick Shortcuts #}
+                    {% if current_user.role in ['admin', 'omborchi'] %}
+                    <a href="/ombor/yangi" class="hidden sm:inline-flex items-center space-x-1.5 text-xs font-bold bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200/80 px-3 py-1.5 rounded-xl transition shadow-xs">
+                        <i class="fa-solid fa-plus text-teal-600"></i>
+                        <span>Kirim qilish</span>
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.role in ['admin', 'sotuvchi'] %}
+                    <a href="/sotuv" class="hidden sm:inline-flex items-center space-x-1.5 text-xs font-bold bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200/80 px-3 py-1.5 rounded-xl transition shadow-xs">
+                        <i class="fa-solid fa-qrcode text-sky-600"></i>
+                        <span>Tezkor Sotuv</span>
+                    </a>
+                    {% endif %}
+
+                    <!-- Keyboard Shortcuts Guide Button -->
+                    <button onclick="openHotkeysModal()" class="hidden sm:inline-flex items-center justify-center w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition border border-slate-200/60" title="Tezkor tugmalar (Shift + ?)">
+                        <i class="fa-regular fa-keyboard text-xs"></i>
+                    </button>
+
+                    <!-- Live Online Pill -->
+                    <span class="hidden md:inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/70">
+                        <i class="fa-solid fa-circle text-[7px] text-emerald-500 mr-1.5 animate-pulse"></i> Online
+                    </span>
+
+                    <!-- User Pill -->
+                    <div class="flex items-center space-x-2 pl-2 border-l border-slate-200">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-xs {% if current_user.role == 'admin' %}bg-amber-500{% elif current_user.role == 'sotuvchi' %}bg-sky-500{% else %}bg-emerald-500{% endif %}">
+                            {{ current_user.full_name[:1].upper() }}
+                        </div>
+                        <div class="hidden sm:block text-left leading-tight">
+                            <span class="block text-xs font-bold text-slate-800">{{ current_user.full_name }}</span>
+                            <span class="block text-[10px] text-slate-500 font-medium capitalize">{{ current_user.role }}</span>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="/login" class="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow-sm">
+                        Kirish
+                    </a>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Scrollable Workspace / Content Body -->
+        <main class="flex-1 overflow-y-auto min-h-0 flex flex-col app-main-content">
+            <!-- Flash Messages Banner -->
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="mb-3 p-4 rounded-2xl text-sm font-medium flex items-center justify-between shadow-xs border transition-all animate-fadeIn {% if category == 'success' %}bg-emerald-50 text-emerald-900 border-emerald-200{% elif category == 'danger' %}bg-rose-50 text-rose-900 border-rose-200{% else %}bg-sky-50 text-sky-900 border-sky-200{% endif %}">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fa-solid {% if category == 'success' %}fa-circle-check text-emerald-600{% elif category == 'danger' %}fa-triangle-exclamation text-rose-600{% else %}fa-circle-info text-sky-600{% endif %} text-base"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-700 transition font-bold text-lg leading-none ml-3">&times;</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Main Injected View Content -->
+            <div class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+                {% block content %}{% endblock %}
+            </div>
+
+            <!-- Slim Workspace Footer -->
+            <footer class="bg-white border-t border-slate-200/80 py-3 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 mt-auto flex-shrink-0">
+                <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-slate-700">KafelCenter ERP</span>
+                        <span>&copy; 2026 Barcha huquqlar himoyalangan</span>
+                    </div>
+                    <div class="flex items-center space-x-4 text-[11px]">
+                        <span class="inline-flex items-center text-emerald-600 font-semibold"><i class="fa-solid fa-circle text-[6px] mr-1.5"></i> SQLite WAL Rejim</span>
+                        <span>Tezkor Kassa & Ombor</span>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Global Confirmation Modal (Replaces browser confirm) -->
+    <div id="globalConfirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 transform transition-transform">
+            <div class="flex items-start space-x-3.5">
+                <div id="confirmModalIconWrapper" class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl flex-shrink-0">
+                    <i id="confirmModalIcon" class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 id="confirmModalTitle" class="text-base font-black text-slate-900 leading-snug">Tasdiqlash</h3>
+                    <p id="confirmModalMessage" class="text-xs text-slate-500 mt-1">Ushbu amalni bajarishga ishonchingiz komilmi?</p>
+                </div>
+            </div>
+            <div id="confirmModalCustomContent" class="hidden text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-200"></div>
+            <div class="flex items-center justify-end space-x-2.5 pt-2 border-t border-slate-100">
+                <button type="button" id="confirmModalCancelBtn" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                    Bekor qilish
+                </button>
+                <button type="button" id="confirmModalOkBtn" class="px-5 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center space-x-1.5">
+                    <span>Tasdiqlash</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hotkeys Cheat-Sheet Modal -->
+    <div id="hotkeysModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-keyboard"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-900">Tezkor Tugmalar (Hotkeys)</h3>
+                        <p class="text-[10px] text-slate-400">Ish unumdorligini oshirish uchun qisqa yo'llar</p>
+                    </div>
+                </div>
+                <button onclick="closeHotkeysModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg">&times;</button>
+            </div>
+
+            <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span class="text-slate-700 font-medium">Sotuv & Kassa (POS)</span>
+                    <kbd class="px-2 py-1 rounded bg-white border border-slate-300 font-mono text-[11px] font-bold text-slate-800 shadow-xs">F2</kbd>
+                </div>
+                {% if current_user and current_user.role != 'sotuvchi' %}
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span class="text-slate-700 font-medium">Ombor Qoldig'i</span>
+                    <kbd class="px-2 py-1 rounded bg-white border border-slate-300 font-mono text-[11px] font-bold text-slate-800 shadow-xs">F3</kbd>
+                </div>
+                {% endif %}
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span class="text-slate-700 font-medium">To'lov & Kassa oynasi</span>
+                    <kbd class="px-2 py-1 rounded bg-white border border-slate-300 font-mono text-[11px] font-bold text-slate-800 shadow-xs">F4</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span class="text-slate-700 font-medium">Nakladnoylar</span>
+                    <kbd class="px-2 py-1 rounded bg-white border border-slate-300 font-mono text-[11px] font-bold text-slate-800 shadow-xs">F7</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span class="text-slate-700 font-medium">Modallarni yopish</span>
+                    <kbd class="px-2 py-1 rounded bg-white border border-slate-300 font-mono text-[11px] font-bold text-slate-800 shadow-xs">Esc</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span class="text-slate-700 font-medium">Tezkor tugmalar yordami</span>
+                    <kbd class="px-2 py-1 rounded bg-white border border-slate-300 font-mono text-[11px] font-bold text-slate-800 shadow-xs">Shift + ?</kbd>
+                </div>
+            </div>
+
+            <div class="pt-2 text-center">
+                <button onclick="closeHotkeysModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-xl text-xs transition">
+                    Tushunarli
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Core Layout, Modals & Hotkey Scripts -->
+    <script>
+        // Sidebar collapse & responsive controls
+        (function() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const desktopToggle = document.getElementById('desktopSidebarToggle');
+            const mobileToggle = document.getElementById('mobileSidebarToggle');
+            const mobileClose = document.getElementById('mobileSidebarClose');
+
+            // Restore collapsed state on desktop from localStorage
+            try {
+                if (localStorage.getItem('kafel_sidebar_collapsed') === 'true') {
+                    document.body.classList.add('sidebar-collapsed');
+                }
+            } catch (e) {}
+
+            // Desktop toggle
+            if (desktopToggle) {
+                desktopToggle.addEventListener('click', () => {
+                    document.body.classList.toggle('sidebar-collapsed');
+                    try {
+                        localStorage.setItem('kafel_sidebar_collapsed', document.body.classList.contains('sidebar-collapsed'));
+                    } catch (e) {}
+                });
+            }
+
+            // Mobile drawer open/close
+            function openMobileDrawer() {
+                if (!sidebar || !backdrop) return;
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hidden');
+            }
+
+            function closeMobileDrawer() {
+                if (!sidebar || !backdrop) return;
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+
+            if (mobileToggle) mobileToggle.addEventListener('click', openMobileDrawer);
+            if (mobileClose) mobileClose.addEventListener('click', closeMobileDrawer);
+            if (backdrop) backdrop.addEventListener('click', closeMobileDrawer);
+
+            // Close mobile drawer upon navigating link
+            const sidebarLinks = sidebar.querySelectorAll('a');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 1024) {
+                        closeMobileDrawer();
+                    }
+                });
+            });
+        })();
+
+        // Global Toast Notification Helper
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const icons = {
+                success: 'fa-circle-check text-emerald-400',
+                danger: 'fa-circle-xmark text-rose-400',
+                warning: 'fa-triangle-exclamation text-amber-400',
+                info: 'fa-circle-info text-sky-400'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `toast-item toast-${type}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type] || icons.info} text-base flex-shrink-0"></i>
+                <span class="flex-1">${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white transition ml-2 font-bold text-base leading-none">&times;</button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('toast-fadeOut');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Global Modern Confirmation Modal Helper (Replaces window.confirm)
+        let _confirmModalCallback = null;
+        window.showConfirmModal = function(options = {}) {
+            const modal = document.getElementById('globalConfirmModal');
+            const titleEl = document.getElementById('confirmModalTitle');
+            const msgEl = document.getElementById('confirmModalMessage');
+            const iconEl = document.getElementById('confirmModalIcon');
+            const iconWrap = document.getElementById('confirmModalIconWrapper');
+            const okBtn = document.getElementById('confirmModalOkBtn');
+            const cancelBtn = document.getElementById('confirmModalCancelBtn');
+            const customContent = document.getElementById('confirmModalCustomContent');
+
+            if (!modal) {
+                // Fallback
+                if (confirm(options.message || options.title || "Tasdiqlaysizmi?")) {
+                    if (options.onConfirm) options.onConfirm();
+                }
+                return;
+            }
+
+            if (titleEl) titleEl.innerText = options.title || "Tasdiqlash";
+            if (msgEl) msgEl.innerText = options.message || "Ushbu amalni bajarishga ishonchingiz komilmi?";
+            
+            if (customContent) {
+                if (options.html) {
+                    customContent.innerHTML = options.html;
+                    customContent.classList.remove('hidden');
+                } else {
+                    customContent.innerHTML = '';
+                    customContent.classList.add('hidden');
+                }
+            }
+
+            if (okBtn) {
+                okBtn.innerHTML = `<span>${options.confirmText || 'Tasdiqlash'}</span>`;
+                okBtn.className = options.confirmClass || "px-5 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center space-x-1.5";
+            }
+            if (cancelBtn) {
+                cancelBtn.innerText = options.cancelText || 'Bekor qilish';
+            }
+
+            _confirmModalCallback = options.onConfirm || null;
+            modal.classList.remove('hidden');
+
+            const handleOk = () => {
+                modal.classList.add('hidden');
+                okBtn.removeEventListener('click', handleOk);
+                if (_confirmModalCallback) _confirmModalCallback();
+            };
+
+            const handleCancel = () => {
+                modal.classList.add('hidden');
+                cancelBtn.removeEventListener('click', handleCancel);
+                if (options.onCancel) options.onCancel();
+            };
+
+            okBtn.onclick = handleOk;
+            cancelBtn.onclick = handleCancel;
+        };
+
+        // Hotkeys Modal Functions
+        function openHotkeysModal() {
+            const modal = document.getElementById('hotkeysModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeHotkeysModal() {
+            const modal = document.getElementById('hotkeysModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // Global Keyboard Shortcut Event Listener
+        document.addEventListener('keydown', (e) => {
+            const targetTag = e.target.tagName.toLowerCase();
+            const isInput = targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select' || e.target.isContentEditable;
+
+            // Esc closes any open modal
+            if (e.key === 'Escape') {
+                closeHotkeysModal();
+                const confirmModal = document.getElementById('globalConfirmModal');
+                if (confirmModal) confirmModal.classList.add('hidden');
+                const tileCalc = document.getElementById('tileCalcModal');
+                if (tileCalc) tileCalc.classList.add('hidden');
+                return;
+            }
+
+            // Shift + ? opens hotkeys
+            if (e.key === '?' && !isInput) {
+                e.preventDefault();
+                openHotkeysModal();
+                return;
+            }
+
+            // Function keys (work anywhere unless handled)
+            if (e.key === 'F2') {
+                e.preventDefault();
+                window.location.href = '/sotuv';
+            {% if current_user and current_user.role != 'sotuvchi' %}
+            } else if (e.key === 'F3') {
+                e.preventDefault();
+                window.location.href = '/ombor';
+            {% endif %}
+            } else if (e.key === 'F4') {
+                e.preventDefault();
+                if (window.location.pathname === '/sotuv' && typeof openCheckoutModal === 'function') {
+                    openCheckoutModal();
+                } else {
+                    window.location.href = '/sotuv?checkout=1';
+                }
+            } else if (e.key === 'F7') {
+                e.preventDefault();
+                window.location.href = '/nakladnoylar';
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

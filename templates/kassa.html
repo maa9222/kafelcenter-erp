@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Kassa - To'lov va Nakladnoy{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shadow-sm border border-emerald-200/60">
+                <i class="fa-solid fa-cash-register"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">Kassa - To'lov Qabul Qilish</h1>
+                <p class="text-xs text-slate-500">Buyurtmani tasdiqlash, to'lov turini tanlash va omborga yuk xati chiqarish</p>
+            </div>
+        </div>
+        <a href="/sotuv" class="inline-flex items-center space-x-2 text-xs font-bold text-sky-700 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 px-4 py-2.5 rounded-2xl border border-sky-200 transition shadow-sm">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Sotuvga Qaytish</span>
+        </a>
+    </div>
+
+    <!-- Empty Cart Warning (if cart is empty) -->
+    <div id="kassaEmptyState" class="hidden bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm">
+        <div class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 mb-4">
+            <i class="fa-solid fa-cart-shopping text-3xl"></i>
+        </div>
+        <h3 class="text-lg font-black text-slate-800">Savatda mahsulot yo'q</h3>
+        <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">To'lov qilishdan oldin kafel namunalarini skanerlab yoki vitrinadan ro'yxatga qo'shing.</p>
+        <a href="/sotuv" class="mt-5 inline-flex items-center space-x-2 bg-sky-600 hover:bg-sky-500 text-white font-bold px-5 py-2.5 rounded-2xl text-xs shadow-md transition">
+            <i class="fa-solid fa-qrcode"></i>
+            <span>Sotuv bo'limiga o'tish</span>
+        </a>
+    </div>
+
+    <!-- Main Checkout Container -->
+    <div id="kassaMainContent" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: Order Items Summary (7 cols) -->
+        <div class="lg:col-span-7 space-y-4">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+                <h2 class="font-bold text-slate-800 text-base mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-layer-group text-sky-600"></i>
+                    <span>Sotilayotgan Kafellar Ro'yxati</span>
+                </h2>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                            <tr>
+                                <th class="py-2.5 px-3 rounded-l-xl">Kafel</th>
+                                <th class="py-2.5 px-3">O'lcham</th>
+                                <th class="py-2.5 px-3 text-center">Miqdori</th>
+                                <th class="py-2.5 px-3 text-right">Narxi</th>
+                                <th class="py-2.5 px-3 text-right rounded-r-xl">Jami</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kassaTableBody" class="divide-y divide-slate-100">
+                            <!-- Injected by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Subtotal and Discount Breakdown -->
+                <div class="mt-6 pt-4 border-t border-slate-100 space-y-2 text-xs">
+                    <div class="flex justify-between items-center text-slate-500 font-semibold">
+                        <span>Hisoblangan oraliq summa:</span>
+                        <span id="kassaSubtotal" class="font-bold text-slate-800 font-mono">0 so'm</span>
+                    </div>
+                    <div class="flex justify-between items-center text-slate-500 font-semibold">
+                        <span>Chegirma (Skidka):</span>
+                        <span id="discountDisplay" class="font-bold text-emerald-600 font-mono">0 so'm</span>
+                    </div>
+                    <div class="flex justify-between items-baseline pt-2 border-t border-slate-100">
+                        <span class="text-sm font-black text-slate-800">Jami To'lov Summasi:</span>
+                        <div class="text-right">
+                            <span id="kassaTotalSum" class="text-3xl font-black text-slate-900 font-mono">0</span>
+                            <span class="text-xs font-bold text-slate-500">so'm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chegirma (Discount) Fast Selector -->
+            <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80">
+                <span class="text-[11px] uppercase font-bold text-slate-400 block mb-2">Mijoz uchun Chegirma (Skidka):</span>
+                <div class="grid grid-cols-4 gap-2">
+                    <button type="button" onclick="applyDiscount(0)" class="py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs transition">
+                        0%
+                    </button>
+                    <button type="button" onclick="applyDiscount(3)" class="py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-black text-xs border border-sky-200 transition">
+                        3%
+                    </button>
+                    <button type="button" onclick="applyDiscount(5)" class="py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black text-xs border border-emerald-200 transition">
+                        5%
+                    </button>
+                    <button type="button" onclick="applyDiscount(10)" class="py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-black text-xs border border-amber-200 transition">
+                        10%
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Payment & Customer Form (5 cols) -->
+        <div class="lg:col-span-5 space-y-4">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-5">
+                <!-- Customer Details with Quick-pick Chips -->
+                <div>
+                    <h3 class="font-bold text-slate-800 text-sm mb-2 flex items-center space-x-2">
+                        <i class="fa-solid fa-user text-sky-600"></i>
+                        <span>Mijoz Ma'lumotlari</span>
+                    </h3>
+
+                    <div class="flex flex-wrap gap-1.5 mb-3">
+                        <button type="button" onclick="document.getElementById('customerName').value='Usta / Prorab'" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded-lg transition">
+                            + Usta / Prorab
+                        </button>
+                        <button type="button" onclick="document.getElementById('customerName').value='Doimiy Xaridor'" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded-lg transition">
+                            + Doimiy Xaridor
+                        </button>
+                        <button type="button" onclick="document.getElementById('customerName').value='Yangi Mijoz'" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded-lg transition">
+                            + Yangi Mijoz
+                        </button>
+                    </div>
+
+                    <div class="space-y-2.5">
+                        <!-- Customer Search & Auto-fill -->
+                        <div class="relative">
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Mijoz Ismi / Tashkilot *</label>
+                            <input type="text" id="customerName" oninput="searchCustomersForKassa(this.value)" autocomplete="off" placeholder="Ism kiriting yoki bazadan qidiring..." class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-medium">
+                            <input type="hidden" id="customerId" value="">
+                            <!-- Dropdown for matching customers -->
+                            <div id="customerSearchDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl z-30 max-h-48 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Telefon Raqami</label>
+                            <input type="tel" id="customerPhone" placeholder="+998 90 123 45 67" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-mono">
+                        </div>
+
+                        <!-- Biriktirilgan Usta / Prorab -->
+                        <div class="pt-2.5 border-t border-slate-100 space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-[11px] font-bold text-amber-700 uppercase flex items-center space-x-1">
+                                    <i class="fa-solid fa-helmet-safety text-amber-500"></i>
+                                    <span>Olib Kelgan Usta / Prorab (KPI)</span>
+                                </label>
+                                <button type="button" onclick="openQuickAddUstaModal()" class="text-[10px] font-bold text-sky-600 hover:text-sky-800 transition flex items-center space-x-0.5">
+                                    <i class="fa-solid fa-plus text-[8px]"></i>
+                                    <span>Yangi Usta</span>
+                                </button>
+                            </div>
+                            <div class="relative">
+                                <input type="text" id="ustaSearchInput" oninput="searchUstalarForKassa(this.value)" onfocus="searchUstalarForKassa(this.value)" autocomplete="off" placeholder="Ustani qidirish (ismi yoki telefoni)..." class="w-full px-3.5 py-2 text-sm bg-amber-50/50 border border-amber-200 rounded-xl focus:outline-none focus:border-amber-500 font-medium">
+                                <input type="hidden" id="checkoutUstaId" value="">
+                                <div id="ustaSearchDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl z-30 max-h-48 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                            </div>
+                            <div id="selectedUstaBadge" class="hidden flex items-center justify-between p-2 px-3 rounded-xl bg-amber-100/80 border border-amber-300 text-xs text-amber-950">
+                                <div class="flex items-center space-x-2 truncate">
+                                    <span class="text-sm">👷</span>
+                                    <span id="selectedUstaName" class="font-bold"></span>
+                                    <span id="selectedUstaPhone" class="text-[11px] text-amber-700 font-mono"></span>
+                                </div>
+                                <button type="button" onclick="clearSelectedUsta()" class="text-amber-800 hover:text-rose-600 font-black text-base ml-2 leading-none" title="Ustani o'chirish">&times;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method Selection -->
+                <div class="pt-3 border-t border-slate-100">
+                    <h3 class="font-bold text-slate-800 text-sm mb-3 flex items-center space-x-2">
+                        <i class="fa-solid fa-wallet text-sky-600"></i>
+                        <span>To'lov Usulini Tanlang</span>
+                    </h3>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <!-- Naqd Pul -->
+                        <label class="cursor-pointer">
+                            <input type="radio" name="paymentMethod" value="naqd" checked class="peer hidden" onchange="togglePaymentInputs('naqd')">
+                            <div class="p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 text-center transition">
+                                <i class="fa-solid fa-money-bill-wave text-xl text-emerald-600 mb-1"></i>
+                                <span class="block text-xs font-black text-slate-800">Naqd</span>
+                            </div>
+                        </label>
+
+                        <!-- Plastik Karta -->
+                        <label class="cursor-pointer">
+                            <input type="radio" name="paymentMethod" value="karta" class="peer hidden" onchange="togglePaymentInputs('karta')">
+                            <div class="p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 peer-checked:border-blue-500 peer-checked:bg-blue-50 text-center transition">
+                                <i class="fa-regular fa-credit-card text-xl text-blue-600 mb-1"></i>
+                                <span class="block text-xs font-black text-slate-800">Karta</span>
+                            </div>
+                        </label>
+
+                        <!-- Nasiya (Qarz) -->
+                        <label class="cursor-pointer">
+                            <input type="radio" name="paymentMethod" value="nasiya" class="peer hidden" onchange="togglePaymentInputs('nasiya')">
+                            <div class="p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 peer-checked:border-amber-500 peer-checked:bg-amber-50 text-center transition">
+                                <i class="fa-solid fa-hand-holding-dollar text-xl text-amber-600 mb-1"></i>
+                                <span class="block text-xs font-black text-slate-800">Nasiya</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Fast Cash Buttons & Calculator (for Naqd) -->
+                <div id="cashCalcBlock" class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-[11px] font-bold text-emerald-900 uppercase">Mijoz Bergan Pul (so'm)</label>
+                        <button type="button" onclick="document.getElementById('cashGivenInput').value=''; calcChange();" class="text-[10px] font-bold text-emerald-700 hover:text-emerald-900">
+                            Tozalash
+                        </button>
+                    </div>
+
+                    <input type="number" id="cashGivenInput" oninput="calcChange()" placeholder="Masalan: 2 000 000" class="w-full px-3.5 py-2 text-base font-black bg-white border border-emerald-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+
+                    <!-- Fast Cash Buttons -->
+                    <div class="grid grid-cols-3 gap-1.5 text-[10px] font-bold">
+                        <button type="button" onclick="setFastCash(50000)" class="py-1.5 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded-lg border border-emerald-200 transition">+50 000</button>
+                        <button type="button" onclick="setFastCash(100000)" class="py-1.5 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded-lg border border-emerald-200 transition">+100 000</button>
+                        <button type="button" onclick="setFastCash(200000)" class="py-1.5 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded-lg border border-emerald-200 transition">+200 000</button>
+                        <button type="button" onclick="setFastCash(500000)" class="py-1.5 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded-lg border border-emerald-200 transition">+500 000</button>
+                        <button type="button" onclick="setFastCash(1000000)" class="py-1.5 px-1 bg-white hover:bg-emerald-100 text-emerald-900 rounded-lg border border-emerald-200 transition">+1 000 000</button>
+                        <button type="button" onclick="setExactCash()" class="py-1.5 px-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition font-black">Aniq To'lov</button>
+                    </div>
+
+                    <div class="flex justify-between items-baseline pt-1 text-xs border-t border-emerald-200/60">
+                        <span class="text-emerald-800 font-semibold">Qaytariladigan qaytim:</span>
+                        <span id="cashChangeOutput" class="text-sm font-black text-emerald-900">0 so'm</span>
+                    </div>
+                </div>
+
+                <!-- Nasiya (Credit) Calculator Block -->
+                <div id="nasiyaCalcBlock" class="hidden p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 space-y-3">
+                    <div class="flex items-center space-x-2 text-amber-900 font-bold text-xs">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                        <span>Nasiyaga (Qarzga) rasmiylashtirish</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Oldindan To'langan Summa (Avans, so'm):</label>
+                        <input type="number" id="nasiyaAdvanceInput" value="0" step="1000" min="0" oninput="calcNasiyaDebt()" class="w-full px-3.5 py-2 text-base font-black bg-white border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono">
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-white border border-amber-200 flex justify-between items-baseline text-xs">
+                        <span class="text-slate-600 font-bold">Nasiyaga yoziladigan qarz:</span>
+                        <span id="nasiyaDebtOutput" class="text-base font-black text-rose-600 font-mono">0 so'm</span>
+                    </div>
+
+                    <p class="text-[10px] text-amber-800 leading-tight">
+                        * Ushbu qarz summasi mijozning Nasiya Daftaridagi profiliga biriktiriladi va qarz balansi avtomatik oshadi.
+                    </p>
+                </div>
+
+                <!-- Cashier Note -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Kassir Izohi (Ixtiyoriy)</label>
+                    <input type="text" id="cashierNote" placeholder="Izoh, qirqim yoki kelishuv..." class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500">
+                </div>
+
+                <!-- Checkout Action Button -->
+                <div class="pt-3 border-t border-slate-100">
+                    <button id="payNowBtn" onclick="submitPayment()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 px-4 rounded-2xl shadow-lg transition flex items-center justify-center space-x-2 text-base">
+                        <i class="fa-solid fa-circle-check text-xl"></i>
+                        <span id="payBtnText">TO'LOV QILINDI (Tasdiqlash)</span>
+                    </button>
+                    <p class="text-[11px] text-slate-400 text-center mt-2">
+                        To'lov tasdiqlangach, tovarlar ombordan ayriladi va omborga yuk berish uchun <b>Nakladnoy</b> chiqariladi.
+                    </p>
+                </div>
+            </div>
+        </div>
+</div>
+
+<!-- Quick Add Usta Modal -->
+<div id="quickAddUstaModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 p-5 space-y-4 animate-in fade-in zoom-in-95">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-helmet-safety"></i>
+                </div>
+                <h3 class="font-black text-slate-900 text-sm">Yangi Usta Qo'shish</h3>
+            </div>
+            <button type="button" onclick="closeQuickAddUstaModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold">&times;</button>
+        </div>
+        <div class="space-y-3 text-xs">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Usta / Prorab F.I.Sh *</label>
+                <input type="text" id="quickUstaName" placeholder="Masalan: Sardor Usta" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-medium">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Telefon Raqami</label>
+                <input type="tel" id="quickUstaPhone" placeholder="+998 90 123 45 67" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-mono">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Qo'shimcha Izoh</label>
+                <input type="text" id="quickUstaNotes" placeholder="Masalan: Yunusobod brigadasi" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500">
+            </div>
+        </div>
+        <div class="flex items-center space-x-2 pt-2">
+            <button type="button" onclick="closeQuickAddUstaModal()" class="flex-1 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition">
+                Bekor qilish
+            </button>
+            <button type="button" onclick="submitQuickAddUsta()" class="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition">
+                Saqlash
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pos.js"></script>
+<script>
+    // Initialize Kassa table and UX helpers on load
+    document.addEventListener("DOMContentLoaded", () => {
+        renderKassaPage();
+
+        // Auto-format phone input
+        const phoneInput = document.getElementById("customerPhone");
+        if (phoneInput) {
+            phoneInput.addEventListener("input", (e) => {
+                let x = e.target.value.replace(/\D/g, '');
+                if (x.startsWith('998')) x = x.substring(3);
+                x = x.substring(0, 9);
+                let formatted = '+998';
+                if (x.length > 0) formatted += ' (' + x.substring(0, 2);
+                if (x.length >= 2) formatted += ') ';
+                if (x.length > 2) formatted += x.substring(2, 5);
+                if (x.length >= 5) formatted += '-' + x.substring(5, 7);
+                if (x.length >= 7) formatted += '-' + x.substring(7, 9);
+                e.target.value = formatted;
+            });
+        }
+
+        // Ctrl + Enter shortcut to trigger submitPayment
+        document.addEventListener("keydown", (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                submitPayment();
+            }
+        });
+    });
+</script>
+{% endblock %}

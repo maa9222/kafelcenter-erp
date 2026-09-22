@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+
+{% block title %}Zavodlar & Markalar Boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-cyan-600 mb-1">
+                <i class="fa-solid fa-industry"></i>
+                <span>Ta'minotchi & Hamkor Zavodlar</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
+                <i class="fa-solid fa-building-flag text-cyan-600"></i>
+                <span>Zavodlar & Ishlab Chiqaruvchi Markalar</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Do'konga kafel yetkazib beruvchi barcha zavodlar, brendlar va ularning aloqa ma'lumotlari boshqaruvi. Bu yerda kiritilgan zavodlar yangi kafel kirim qilishda avtomatik ko'rinadi.
+            </p>
+        </div>
+        <div class="flex items-center space-x-2.5">
+            <a href="/ombor/yangi" class="inline-flex items-center space-x-2 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200 shadow-xs transition">
+                <i class="fa-solid fa-square-plus text-teal-600"></i>
+                <span>Kafel Kirim Qilish</span>
+            </a>
+            <button type="button" onclick="openAddFactoryModal()" class="inline-flex items-center space-x-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black px-4 py-2.5 rounded-2xl shadow-md shadow-cyan-600/20 transition text-xs sm:text-sm">
+                <i class="fa-solid fa-plus-circle text-base"></i>
+                <span>+ Yangi Zavod Qo'shish</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Summary Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Jami Zavodlar</span>
+                <span class="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block font-mono">
+                    {{ kpi.total_factories or factories|length }} <span class="text-xs font-bold text-slate-400">ta</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">Ro'yxatga olingan brendlar</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-2xl border border-cyan-200/60 shadow-xs">
+                <i class="fa-solid fa-industry"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Faol Hamkorlar</span>
+                <span class="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block font-mono">
+                    {{ kpi.active_factories or 0 }} <span class="text-xs font-bold text-slate-400">ta</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">Doimiy yetkazib beruvchilar</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl border border-emerald-200/60 shadow-xs">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Mamlakatlar</span>
+                <span class="text-2xl sm:text-3xl font-black text-indigo-600 mt-1 block font-mono">
+                    {{ kpi.total_countries or 0 }} <span class="text-xs font-bold text-slate-400">ta davlat</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">O'zbekiston, Rossiya, Eron...</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl border border-indigo-200/60 shadow-xs">
+                <i class="fa-solid fa-earth-americas"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Do'kondagi Kafellar</span>
+                <span class="text-2xl sm:text-3xl font-black text-amber-600 mt-1 block font-mono">
+                    {{ kpi.total_products_linked or 0 }} <span class="text-xs font-bold text-slate-400">xil model</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">Ushbu zavodlardan kiritilgan</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl border border-amber-200/60 shadow-xs">
+                <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Quick Filter Toolbar -->
+    <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="relative w-full sm:w-96">
+                <input type="text" id="factorySearchInput" oninput="filterFactories(this.value)" placeholder="🔍 Zavod nomi, mamlakat yoki mas'ul shaxs..." class="w-full pl-10 pr-8 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white font-medium transition">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <button type="button" onclick="document.getElementById('factorySearchInput').value=''; filterFactories('');" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold leading-none">&times;</button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                <span class="text-[11px] font-bold text-slate-400 mr-1">Filtr:</span>
+                <button type="button" onclick="filterByCountry('')" class="country-filter-btn px-3 py-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs transition">Barchasi</button>
+                <button type="button" onclick="filterByCountry('O'zbekiston')" class="country-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition">🇺🇿 O'zbekiston</button>
+                <button type="button" onclick="filterByCountry('Rossiya')" class="country-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition">🇷🇺 Rossiya</button>
+                <button type="button" onclick="filterByCountry('Eron')" class="country-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition">🇮🇷 Eron</button>
+                <button type="button" onclick="filterByCountry('Turkiya')" class="country-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition">🇹🇷 Turkiya</button>
+                <button type="button" onclick="filterByCountry('Xitoy')" class="country-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition">🇨🇳 Xitoy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Factories Table -->
+    <div class="bg-white rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse" id="factoriesTable">
+                <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-black uppercase text-slate-500 tracking-wider">
+                        <th class="py-3.5 px-4 w-12 text-center">#</th>
+                        <th class="py-3.5 px-4">Zavod / Marka Nomi</th>
+                        <th class="py-3.5 px-4">Mamlakat & Manzil</th>
+                        <th class="py-3.5 px-4">Mas'ul Shaxs & Aloqa</th>
+                        <th class="py-3.5 px-4 text-center">Do'kondagi Kafel</th>
+                        <th class="py-3.5 px-4 text-center">Holati</th>
+                        <th class="py-3.5 px-4">Eslatma / Izoh</th>
+                        <th class="py-3.5 px-4 text-center w-28">Amallar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100" id="factoriesTableBody">
+                    {% for f in factories %}
+                    <tr class="hover:bg-slate-50/80 transition factory-row {% if loop.first %}bg-cyan-50/20{% endif %}" data-name="{{ f.name|lower }}" data-country="{{ (f.country or '')|lower }}" data-person="{{ (f.contact_person or '')|lower }}">
+                        <td class="py-3.5 px-4 text-center font-mono text-xs text-slate-400 font-bold">
+                            {{ loop.index }}
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-200/70 text-cyan-600 flex items-center justify-center font-black text-base flex-shrink-0 shadow-2xs">
+                                    <i class="fa-solid fa-industry"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="font-bold text-slate-900 text-sm leading-tight">{{ f.name }}</h4>
+                                        {% if loop.first %}
+                                        <span class="text-[9px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider">Eng so'nggi</span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-[10px] text-slate-400 font-mono">ID: #ZVD-{{ f.id }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-xs">
+                            <span class="font-bold text-slate-800 flex items-center space-x-1">
+                                <i class="fa-solid fa-location-dot text-rose-500 text-[10px]"></i>
+                                <span>{{ f.country or "O'zbekiston" }}</span>
+                            </span>
+                            {% if f.address %}
+                            <span class="text-[11px] text-slate-500 block mt-0.5 truncate max-w-xs" title="{{ f.address }}">
+                                {{ f.address }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-xs">
+                            {% if f.contact_person %}
+                            <span class="font-bold text-slate-800 block flex items-center space-x-1">
+                                <i class="fa-solid fa-user-tie text-slate-400 text-[10px]"></i>
+                                <span>{{ f.contact_person }}</span>
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400 italic text-[11px]">Ko'rsatilmagan</span>
+                            {% endif %}
+                            {% if f.phone %}
+                            <a href="tel:{{ f.phone }}" class="text-sky-600 hover:text-sky-800 font-mono text-xs font-semibold block mt-0.5 hover:underline">
+                                <i class="fa-solid fa-phone text-[10px] mr-1"></i>{{ f.phone }}
+                            </a>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-center font-mono">
+                            {% if f.product_count and f.product_count > 0 %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
+                                <i class="fa-solid fa-boxes-stacked mr-1 text-[10px]"></i>
+                                {{ f.product_count }} xil model
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-slate-400 italic">0 xil</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            {% if f.is_active == 1 %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+                                Faol
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-100 text-slate-500 border border-slate-200 shadow-2xs">
+                                Nofaol
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-xs text-slate-500 max-w-xs">
+                            <span class="truncate block" title="{{ f.note or '' }}">{{ f.note or "—" }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <div class="flex items-center justify-center space-x-1.5">
+                                <button type="button" onclick="openEditFactoryModal({{ f.id }}, '{{ f.name|escape }}', '{{ (f.country or '')|escape }}', '{{ (f.contact_person or '')|escape }}', '{{ (f.phone or '')|escape }}', '{{ (f.address or '')|escape }}', '{{ (f.note or '')|escape }}', {{ f.is_active or 1 }})" class="p-2 rounded-xl text-slate-500 hover:text-sky-600 hover:bg-sky-50 transition" title="Tahrirlash">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button type="button" onclick="deleteFactory({{ f.id }}, '{{ f.name|escape }}', {{ f.product_count or 0 }})" class="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition" title="O'chirish">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-industry text-4xl mb-3 text-slate-300"></i>
+                            <h4 class="font-bold text-slate-700 text-sm">Zavodlar ro'yxati bo'sh</h4>
+                            <p class="text-xs text-slate-400 mt-1">Yangi zavod yoki marka qo'shish uchun yuqoridagi tugmani bosing</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: YANGI ZAVOD QO'SHISH VA TAHRIRLASH -->
+<div id="factoryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-cyan-100/70 text-cyan-700 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-industry" id="factoryModalIcon"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-base" id="factoryModalTitle">Yangi Zavod / Marka Qo'shish</h3>
+                    <p class="text-xs text-slate-400">Ushbu marka kafel kirim qilishda ko'rinadi</p>
+                </div>
+            </div>
+            <button onclick="closeFactoryModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <form id="factoryForm" onsubmit="submitFactoryForm(event)" class="space-y-4">
+            <input type="hidden" id="factoryIdInput" value="">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Zavod / Marka Nomi <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" id="factoryNameInput" required placeholder="Masalan: Kerama Marazzi, Cersanit, Samarqand Kafel..." class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white font-bold transition">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Ishlab Chiqaruvchi Mamlakat
+                    </label>
+                    <select id="factoryCountryInput" class="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white font-semibold transition">
+                        <option value="O'zbekiston" selected>🇺🇿 O'zbekiston</option>
+                        <option value="Rossiya">🇷🇺 Rossiya</option>
+                        <option value="Turkiya">🇹🇷 Turkiya</option>
+                        <option value="Eron">🇮🇷 Eron</option>
+                        <option value="Xitoy">🇨🇳 Xitoy</option>
+                        <option value="Italiya">🇮🇹 Italiya</option>
+                        <option value="Ispaniya">🇪🇸 Ispaniya</option>
+                        <option value="Polsha">🇵🇱 Polsha</option>
+                        <option value="Hindiston">🇮🇳 Hindiston</option>
+                        <option value="Boshqa">🌍 Boshqa mamlakat</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Holati
+                    </label>
+                    <select id="factoryActiveInput" class="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white font-semibold transition">
+                        <option value="1" selected>✅ Faol (Kirimda ko'rinadi)</option>
+                        <option value="0">⛔ Nofaol (Vaqtinchalik to'xtatilgan)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Mas'ul Shaxs (Menejer)
+                    </label>
+                    <input type="text" id="factoryPersonInput" placeholder="Masalan: Abror aka" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white font-medium transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Telefon Raqami
+                    </label>
+                    <input type="text" id="factoryPhoneInput" placeholder="+998 90 123 45 67" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white font-mono transition">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Zavod yoki Ombor Manzili
+                </label>
+                <input type="text" id="factoryAddressInput" placeholder="Masalan: Samarqand sh., Sanoat hududi, 12-bino" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white font-medium transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Qo'shimcha Eslatma / Izoh
+                </label>
+                <textarea id="factoryNoteInput" rows="2" placeholder="Masalan: Faqat 60x120 granit yetkazib beradi, yetkazib berish muddati 3 kun..." class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white font-medium transition"></textarea>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeFactoryModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Bekor qilish</button>
+                <button type="submit" id="saveFactoryBtn" class="px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-black rounded-xl shadow-md transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Saqlash</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddFactoryModal() {
+    document.getElementById("factoryModalTitle").innerText = "Yangi Zavod / Marka Qo'shish";
+    document.getElementById("factoryIdInput").value = "";
+    document.getElementById("factoryNameInput").value = "";
+    document.getElementById("factoryCountryInput").value = "O'zbekiston";
+    document.getElementById("factoryPersonInput").value = "";
+    document.getElementById("factoryPhoneInput").value = "";
+    document.getElementById("factoryAddressInput").value = "";
+    document.getElementById("factoryNoteInput").value = "";
+    document.getElementById("factoryActiveInput").value = "1";
+    document.getElementById("factoryModal").classList.remove("hidden");
+    document.getElementById("factoryNameInput").focus();
+}
+
+function openEditFactoryModal(id, name, country, person, phone, address, note, isActive) {
+    document.getElementById("factoryModalTitle").innerText = `'${name}' Zavodini Tahrirlash`;
+    document.getElementById("factoryIdInput").value = id;
+    document.getElementById("factoryNameInput").value = name;
+    document.getElementById("factoryCountryInput").value = country || "O'zbekiston";
+    document.getElementById("factoryPersonInput").value = person || "";
+    document.getElementById("factoryPhoneInput").value = phone || "";
+    document.getElementById("factoryAddressInput").value = address || "";
+    document.getElementById("factoryNoteInput").value = note || "";
+    document.getElementById("factoryActiveInput").value = String(isActive);
+    document.getElementById("factoryModal").classList.remove("hidden");
+    document.getElementById("factoryNameInput").focus();
+}
+
+function closeFactoryModal() {
+    document.getElementById("factoryModal").classList.add("hidden");
+}
+
+async function submitFactoryForm(e) {
+    e.preventDefault();
+    const id = document.getElementById("factoryIdInput").value;
+    const name = document.getElementById("factoryNameInput").value.trim();
+    const country = document.getElementById("factoryCountryInput").value;
+    const person = document.getElementById("factoryPersonInput").value.trim();
+    const phone = document.getElementById("factoryPhoneInput").value.trim();
+    const address = document.getElementById("factoryAddressInput").value.trim();
+    const note = document.getElementById("factoryNoteInput").value.trim();
+    const isActive = parseInt(document.getElementById("factoryActiveInput").value) || 1;
+
+    if (!name) {
+        alert("Zavod yoki marka nomini kiriting!");
+        return;
+    }
+
+    const isEdit = Boolean(id);
+    const url = isEdit ? `/api/factories/${id}/edit` : "/api/factories/add";
+
+    try {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: name,
+                country: country,
+                contact_person: person,
+                phone: phone,
+                address: address,
+                note: note,
+                is_active: isActive
+            })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            closeFactoryModal();
+            window.location.reload();
+        } else {
+            alert(data.message || "Xatolik yuz berdi!");
+        }
+    } catch (err) {
+        alert("Server bilan bog'lanishda xato: " + err.message);
+    }
+}
+
+async function deleteFactory(id, name, prodCount) {
+    const warningMsg = prodCount > 0 
+        ? `'${name}' zavodiga biriktirilgan ${prodCount} ta kafel mavjud. U butunlay o'chirilmaydi, balki 'Nofaol' holatiga o'tkaziladi. Davom etasizmi?`
+        : `'${name}' zavodini ro'yxatdan butunlay o'chirasizmi?`;
+
+    if (!confirm(warningMsg)) return;
+
+    try {
+        const res = await fetch(`/api/factories/${id}/delete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.message || "O'chirishda xatolik yuz berdi!");
+        }
+    } catch (err) {
+        alert("Server bilan bog'lanishda xato: " + err.message);
+    }
+}
+
+function filterFactories(q) {
+    q = (q || "").trim().toLowerCase();
+    const rows = document.querySelectorAll(".factory-row");
+    rows.forEach(r => {
+        const name = r.getAttribute("data-name") || "";
+        const country = r.getAttribute("data-country") || "";
+        const person = r.getAttribute("data-person") || "";
+        if (!q || name.includes(q) || country.includes(q) || person.includes(q)) {
+            r.style.display = "";
+        } else {
+            r.style.display = "none";
+        }
+    });
+}
+
+function filterByCountry(country) {
+    document.querySelectorAll(".country-filter-btn").forEach(b => {
+        b.className = "country-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition";
+    });
+    event.target.className = "country-filter-btn px-3 py-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs transition";
+
+    country = (country || "").trim().toLowerCase();
+    const rows = document.querySelectorAll(".factory-row");
+    rows.forEach(r => {
+        const c = r.getAttribute("data-country") || "";
+        if (!country || c.includes(country)) {
+            r.style.display = "";
+        } else {
+            r.style.display = "none";
+        }
+    });
+}
+</script>
+{% endblock %}

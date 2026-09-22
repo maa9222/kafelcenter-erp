@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chek - {{ order.order_number }}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <link rel="shortcut icon" href="/static/img/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body {
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #000 !important;
+            }
+            .receipt-container {
+                width: 80mm !important;
+                max-width: 80mm !important;
+                margin: 0 auto !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 6mm 4mm !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 py-6 text-slate-900 font-mono text-xs">
+    <!-- Top Action Toolbar -->
+    <div class="no-print max-w-sm mx-auto mb-4 flex items-center justify-between px-3">
+        <a href="/nakladnoy/{{ order.id }}" class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-200">
+            &larr; Orqaga
+        </a>
+        <div class="flex items-center space-x-2">
+            <a href="/nakladnoy/{{ order.id }}/print" class="text-xs font-bold text-sky-700 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-200">
+                A4 Nakladnoy
+            </a>
+            <button onclick="window.print()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded-xl shadow-sm transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-print"></i>
+                <span>Chop Etish</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 80mm POS Thermal Receipt Layout -->
+    <div class="receipt-container max-w-[80mm] mx-auto bg-white p-5 rounded-2xl shadow-md border border-slate-200 leading-tight">
+        <!-- Store Header -->
+        <div class="text-center border-b border-dashed border-slate-400 pb-3 mb-3">
+            <img src="/static/img/logo.png" alt="Kafel Center" class="h-10 mx-auto object-contain mb-1.5 grayscale contrast-125">
+            <h1 class="text-base font-black tracking-tight uppercase">KAFEL CENTER</h1>
+            <p class="text-[10px] text-slate-600 mt-0.5">Sifatli kafellar va kafel markazi</p>
+            <p class="text-[10px] text-slate-600">Tel: +998 90 000 00 00</p>
+            <p class="text-[9px] text-slate-500">Manzil: Kafel Bozori, 1-qator</p>
+        </div>
+
+        <!-- Order Meta -->
+        <div class="space-y-1 text-[11px] border-b border-dashed border-slate-400 pb-3 mb-3">
+            <div class="flex justify-between">
+                <span class="text-slate-600">Chek №:</span>
+                <span class="font-black">{{ order.order_number }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-600">Sotilgan vaqti:</span>
+                <span>{{ order.created_at }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-600">Sotuvchi (Kassir):</span>
+                <span class="font-bold">{{ order.seller_name or 'Kassir' }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-600">Mijoz:</span>
+                <span class="font-bold truncate max-w-[120px]">{{ order.customer_name or 'Mijoz' }}</span>
+            </div>
+            {% if order.customer_phone %}
+            <div class="flex justify-between">
+                <span class="text-slate-600">Tel:</span>
+                <span>{{ order.customer_phone }}</span>
+            </div>
+            {% endif %}
+            {% if usta %}
+            <div class="flex justify-between text-amber-950 font-bold">
+                <span class="text-slate-600">Usta:</span>
+                <span class="truncate max-w-[120px]">{{ usta.full_name }}</span>
+            </div>
+            {% endif %}
+            <div class="flex justify-between">
+                <span class="text-slate-600">To'lov turi:</span>
+                <span class="font-bold uppercase">{{ order.payment_method }} (To'langan)</span>
+            </div>
+            {% if order.status == 'yuk_berildi' %}
+            <div class="flex justify-between text-emerald-800 font-semibold pt-1 border-t border-dotted border-slate-300">
+                <span>Omborchi:</span>
+                <span>{{ order.dispatched_by or 'Omborchi' }}</span>
+            </div>
+            <div class="flex justify-between text-emerald-800 text-[10px]">
+                <span>Topshirilgan vaqt:</span>
+                <span>{{ order.dispatched_at }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Items Table -->
+        <div class="border-b border-dashed border-slate-400 pb-3 mb-3">
+            <div class="text-[10px] font-black uppercase text-slate-600 border-b border-slate-200 pb-1 mb-2 flex justify-between">
+                <span>Mahsulot</span>
+                <span>Jami</span>
+            </div>
+
+            <div class="space-y-2">
+                {% for itm in items %}
+                <div>
+                    <div class="font-bold text-[11px] leading-snug">
+                        {{ loop.index }}. {{ itm.brand }} - {{ itm.model_name }}
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-600 pl-3">
+                        <span>{{ itm.size }} &bull; {{ itm.quantity }} {{ itm.unit }} &times; {{ "{:,.0f}".format(itm.unit_price) }}</span>
+                        <span class="font-bold text-slate-900">{{ "{:,.0f}".format(itm.total_price).replace(",", " ") }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Totals -->
+        <div class="space-y-1.5 text-xs border-b border-dashed border-slate-400 pb-3 mb-3">
+            <div class="flex justify-between items-baseline text-sm font-black">
+                <span>JAMI TO'LOV:</span>
+                <span class="text-base font-black">{{ "{:,.0f}".format(order.total_amount).replace(",", " ") }} so'm</span>
+            </div>
+            {% if order.cashier_note %}
+            <div class="text-[9px] text-slate-600 pt-1">
+                <span>Izoh: {{ order.cashier_note }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Barcode / QR Simulation & Verification -->
+        <div class="text-center space-y-1 py-1">
+            <div class="inline-block p-1 bg-white border border-slate-300 rounded">
+                <i class="fa-solid fa-qrcode text-3xl text-slate-800"></i>
+            </div>
+            <p class="text-[9px] font-mono font-bold text-slate-600">{{ order.order_number }}</p>
+        </div>
+
+        <!-- Footer Notice -->
+        <div class="text-center text-[9px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-0.5">
+            <p class="font-bold text-slate-700">Xaridingiz uchun tashakkur!</p>
+            <p>Ombordan yuk chiqarish uchun ushbu chekni taqdim eting.</p>
+            <p class="text-[8px] text-slate-400 mt-1">KafelCenter ERP &bull; 2026</p>
+        </div>
+    </div>
+</body>
+</html>

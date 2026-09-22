@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}Mijozlar & Nasiya Daftari (CRM){% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with Quick Action -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-amber-600 mb-1">
+                <i class="fa-solid fa-users-viewfinder"></i>
+                <span>Mijozlar Bazasi & Nasiya Daftari</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
+                <i class="fa-solid fa-address-book text-amber-500"></i>
+                <span>Mijozlar & Nasiya (Qarz) Daftari</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Ustalar, prorablar va doimiy xaridorlar balansi, nasiya qarzlarini hisobga olish va to'lovlar auditi
+            </p>
+        </div>
+        <div class="flex items-center space-x-2.5">
+            <button onclick="openNewCustomerModal()" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-amber-500/20 transition">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Yangi Mijoz Qo'shish</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Summary Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Card 1: Jami Mijozlar -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Jami Ro'yxatdagi Mijozlar</span>
+                <span class="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+                    {{ kpi.total_cnt or 0 }} <span class="text-sm font-semibold text-slate-400">nafar</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">Usta, prorab va xaridorlar</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl border border-amber-200/60 shadow-xs">
+                <i class="fa-solid fa-users"></i>
+            </div>
+        </div>
+
+        <!-- Card 2: Jami Nasiya (Qarz) Summasi -->
+        <div class="bg-gradient-to-br from-rose-50 to-orange-50/50 rounded-3xl p-5 border border-rose-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-black uppercase tracking-wider text-rose-600 block flex items-center space-x-1.5">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block"></span>
+                    <span>Jami Nasiya (Qarz) Summasi</span>
+                </span>
+                <span class="text-2xl sm:text-3xl font-black text-rose-700 mt-1 block font-mono">
+                    {{ "{:,.0f}".format(kpi.total_debt or 0).replace(',', ' ') }} <span class="text-sm font-bold text-rose-500">so'm</span>
+                </span>
+                <span class="text-[11px] text-rose-600/80 mt-0.5 block font-medium">Do'konga qaytarilishi kerak bo'lgan mablag'</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl shadow-md shadow-rose-500/30">
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+            </div>
+        </div>
+
+        <!-- Card 3: Qarzdorlar Soni -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Nasiyasi Bor Mijozlar</span>
+                <span class="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+                    {{ kpi.debtors_cnt or 0 }} <span class="text-sm font-semibold text-slate-400">kishi</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">Nasiya muddatlarini nazorat qiling</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center text-2xl border border-orange-200/60 shadow-xs">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Search Bar -->
+    <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-4">
+        <form method="GET" action="/mijozlar" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+            <!-- Search input -->
+            <div class="sm:col-span-5 relative">
+                <input type="text" name="q" value="{{ q }}" placeholder="Mijoz ismi, telefon raqami yoki izohi..." class="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 focus:bg-white font-medium transition">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+            </div>
+
+            <!-- Customer Type Filter -->
+            <div class="sm:col-span-3">
+                <select name="type" class="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-medium">
+                    <option value="" {% if not c_type %}selected{% endif %}>Barcha toifalar</option>
+                    <option value="usta" {% if c_type == 'usta' %}selected{% endif %}>Usta / Plitochnik</option>
+                    <option value="prorab" {% if c_type == 'prorab' %}selected{% endif %}>Prorab / Quruvchi</option>
+                    <option value="doimiy" {% if c_type == 'doimiy' %}selected{% endif %}>Doimiy Xaridor</option>
+                    <option value="xaridor" {% if c_type == 'xaridor' %}selected{% endif %}>Oddiy Xaridor</option>
+                </select>
+            </div>
+
+            <!-- Debt Only Checkbox -->
+            <div class="sm:col-span-2 flex items-center">
+                <label class="inline-flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                    <input type="checkbox" name="debt_only" value="1" {% if debt_only == '1' %}checked{% endif %} class="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300">
+                    <span class="text-rose-600">Faqat Qarzdorlar</span>
+                </label>
+            </div>
+
+            <!-- Submit Button & Reset -->
+            <div class="sm:col-span-2 flex items-center space-x-2">
+                <button type="submit" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition shadow-sm">
+                    Filtr
+                </button>
+                <a href="/mijozlar" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 px-3 rounded-xl transition text-center" title="Filtrlarni tozalash">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Customers Table -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="font-bold text-slate-900 text-base flex items-center space-x-2">
+                <i class="fa-solid fa-users text-amber-500"></i>
+                <span>Mijozlar Ro'yxati ({{ customers|length }} ta)</span>
+            </h2>
+            <span class="text-xs text-slate-400">Qarz balansi va to'lov qabul qilish</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                    <tr>
+                        <th class="py-3 px-4">#</th>
+                        <th class="py-3 px-4">Mijoz Ismi</th>
+                        <th class="py-3 px-4">Telefon</th>
+                        <th class="py-3 px-4">Toifasi</th>
+                        <th class="py-3 px-4 text-right">Qarz Balansi (Nasiya)</th>
+                        <th class="py-3 px-4">Izoh</th>
+                        <th class="py-3 px-4 text-center">Amallar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if customers %}
+                        {% for c in customers %}
+                        <tr class="hover:bg-amber-50/40 transition">
+                            <td class="py-3.5 px-4 font-mono text-slate-400 text-xs">{{ c.id }}</td>
+                            <td class="py-3.5 px-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-black flex items-center justify-center text-xs shadow-xs uppercase">
+                                        {{ c.full_name[:2] }}
+                                    </div>
+                                    <div>
+                                        <span class="font-bold text-slate-900 block text-xs sm:text-sm">{{ c.full_name }}</span>
+                                        <span class="text-[10px] text-slate-400">Kiritilgan: {{ c.created_at[:10] }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3.5 px-4 font-mono font-medium text-slate-600">
+                                {% if c.phone %}
+                                    <a href="tel:{{ c.phone }}" class="hover:text-amber-600 transition flex items-center space-x-1">
+                                        <i class="fa-solid fa-phone text-[10px] text-slate-400"></i>
+                                        <span>{{ c.phone }}</span>
+                                    </a>
+                                {% else %}
+                                    <span class="text-slate-300">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-4">
+                                {% if c.customer_type == 'usta' %}
+                                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-purple-50 text-purple-700 border border-purple-200">
+                                        <i class="fa-solid fa-trowel mr-1"></i> Usta
+                                    </span>
+                                {% elif c.customer_type == 'prorab' %}
+                                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                                        <i class="fa-solid fa-helmet-safety mr-1"></i> Prorab
+                                    </span>
+                                {% elif c.customer_type == 'doimiy' %}
+                                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        <i class="fa-solid fa-star mr-1"></i> Doimiy
+                                    </span>
+                                {% else %}
+                                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-slate-100 text-slate-600">
+                                        Xaridor
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-mono">
+                                {% if c.balance_debt > 0 %}
+                                    <div class="inline-flex flex-col items-end">
+                                        <span class="text-sm font-black text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200/80">
+                                            {{ "{:,.0f}".format(c.balance_debt).replace(',', ' ') }} so'm
+                                        </span>
+                                        <span class="text-[9px] text-rose-500 font-bold uppercase mt-0.5">Nasiya mavjud</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                                        Qarzi yo'q (0 so'm)
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-4 text-slate-500 text-xs max-w-xs truncate">
+                                {{ c.notes or '-' }}
+                            </td>
+                            <td class="py-3.5 px-4 text-center">
+                                {% if c.balance_debt > 0 %}
+                                    <button onclick="openPayDebtModal({{ c.id }}, '{{ c.full_name }}', {{ c.balance_debt }})" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center space-x-1.5 mx-auto">
+                                        <i class="fa-solid fa-hand-holding-dollar"></i>
+                                        <span>Qarz To'lash</span>
+                                    </button>
+                                {% else %}
+                                    <span class="text-xs text-slate-400 font-medium italic">Balans toza</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-12 text-slate-400">
+                                <i class="fa-solid fa-user-slash text-3xl mb-2 text-slate-300"></i>
+                                <p class="text-sm font-bold">Mijozlar topilmadi</p>
+                                <p class="text-xs text-slate-400 mt-1">Qidiruv parametrlarini o'zgartiring yoki yangi mijoz qo'shing</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Debt Payments History (So'nggi Nasiya To'lovlari Auditi) -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-900 text-base flex items-center space-x-2">
+                <i class="fa-solid fa-clock-rotate-left text-teal-600"></i>
+                <span>So'nggi Nasiya To'lovlari Auditi (Oxirgi 15 ta)</span>
+            </h3>
+            <span class="text-xs text-slate-400">Qarz qaytarilganlik kvitansiyalari</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold">
+                    <tr>
+                        <th class="py-2.5 px-3 rounded-l-xl">Sana & Vaqt</th>
+                        <th class="py-2.5 px-3">Mijoz</th>
+                        <th class="py-2.5 px-3 text-right">To'langan Summa</th>
+                        <th class="py-2.5 px-3 text-center">To'lov Turi</th>
+                        <th class="py-2.5 px-3">Qabul Qilgan Xodim</th>
+                        <th class="py-2.5 px-3 rounded-r-xl">Izoh</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if recent_payments %}
+                        {% for p in recent_payments %}
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-2.5 px-3 font-mono text-slate-500">{{ p.created_at }}</td>
+                            <td class="py-2.5 px-3 font-bold text-slate-800">{{ p.customer_name }}</td>
+                            <td class="py-2.5 px-3 text-right font-mono font-black text-emerald-600">
+                                +{{ "{:,.0f}".format(p.amount).replace(',', ' ') }} so'm
+                            </td>
+                            <td class="py-2.5 px-3 text-center">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {% if p.payment_method == 'naqd' %}bg-emerald-50 text-emerald-700{% else %}bg-blue-50 text-blue-700{% endif %}">
+                                    {{ p.payment_method }}
+                                </span>
+                            </td>
+                            <td class="py-2.5 px-3 text-slate-600 font-medium">
+                                <i class="fa-solid fa-user-check text-slate-400 text-[10px] mr-1"></i>
+                                {{ p.received_by or 'Kassir' }}
+                            </td>
+                            <td class="py-2.5 px-3 text-slate-400 italic">{{ p.note or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-6 text-slate-400">
+                                Hali qarz to'lovlari qayd etilmagan.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Yangi Mijoz Qo'shish -->
+<div id="newCustomerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-base leading-tight">Yangi Mijoz Qo'shish</h3>
+                    <p class="text-xs text-slate-400">Usta, prorab yoki doimiy xaridor</p>
+                </div>
+            </div>
+            <button onclick="closeNewCustomerModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <form method="POST" action="/mijozlar" class="space-y-3.5 text-xs">
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Mijoz / Tashkilot Nomi *</label>
+                <input type="text" name="full_name" required placeholder="Masalan: Azizbek Usta (Plitochnik)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-amber-500 focus:bg-white text-slate-900">
+            </div>
+
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Telefon Raqami</label>
+                <input type="tel" name="phone" placeholder="+998 90 123 45 67" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-amber-500 focus:bg-white text-slate-900">
+            </div>
+
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Mijoz Toifasi</label>
+                <select name="customer_type" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-amber-500 focus:bg-white text-slate-800">
+                    <option value="usta">Usta / Plitochnik</option>
+                    <option value="prorab">Prorab / Quruvchi</option>
+                    <option value="doimiy">Doimiy Xaridor</option>
+                    <option value="xaridor" selected>Oddiy Xaridor</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Boshlang'ich Nasiya / Qarz (so'm)</label>
+                <input type="number" name="balance_debt" value="0" step="1000" min="0" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-black focus:outline-none focus:border-amber-500 focus:bg-white text-slate-900">
+            </div>
+
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Izoh / Qo'shimcha ma'lumot</label>
+                <textarea name="notes" rows="2" placeholder="Masalan: 'Sergeli obyekti bosh prorabi'..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-amber-500 focus:bg-white text-slate-900"></textarea>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closeNewCustomerModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Bekor qilish</button>
+                <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md transition">Mijozni Saqlash</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: Nasiya Qarzini To'lash -->
+<div id="payDebtModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-base leading-tight">Qarz To'lovini Qabul Qilish</h3>
+                    <p class="text-xs text-slate-400" id="payDebtCustomerName">Mijoz</p>
+                </div>
+            </div>
+            <button onclick="closePayDebtModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="space-y-4 text-xs">
+            <input type="hidden" id="payDebtCustomerId">
+
+            <!-- Current Debt Info Card -->
+            <div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex justify-between items-center">
+                <span class="text-[11px] font-bold uppercase text-rose-700">Hozirgi Qarz Miqdori:</span>
+                <span id="payDebtCurrentAmount" class="text-base font-black text-rose-700 font-mono">0 so'm</span>
+            </div>
+
+            <!-- Payment Amount Input -->
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block font-bold text-slate-600 uppercase text-[10px]">To'lanayotgan Summa (so'm) *</label>
+                    <button type="button" onclick="setFullPayDebt()" class="text-[10px] font-black text-emerald-600 hover:text-emerald-700">
+                        To'liq yopish (100%)
+                    </button>
+                </div>
+                <input type="number" id="payDebtAmountInput" step="1000" min="1" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-black text-base text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white">
+            </div>
+
+            <!-- Payment Method -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">To'lov Usuli</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="payDebtMethod" value="naqd" checked class="peer hidden">
+                        <div class="py-2.5 rounded-xl border border-slate-200 bg-slate-50 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 text-center font-bold text-xs transition">
+                            <i class="fa-solid fa-money-bill-wave mr-1"></i> Naqd Pul
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="payDebtMethod" value="karta" class="peer hidden">
+                        <div class="py-2.5 rounded-xl border border-slate-200 bg-slate-50 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 text-center font-bold text-xs transition">
+                            <i class="fa-regular fa-credit-card mr-1"></i> Plastik Karta
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Note -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Kvitansiya Izohi</label>
+                <input type="text" id="payDebtNoteInput" placeholder="Masalan: 'Qisman to'lov qilindi'..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-emerald-500 focus:bg-white text-slate-900">
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closePayDebtModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Bekor qilish</button>
+                <button type="button" onclick="submitPayDebt()" id="submitPayDebtBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-check"></i>
+                    <span>To'lovni Tasdiqlash</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let activeCustomerDebt = 0;
+
+    function openNewCustomerModal() {
+        document.getElementById("newCustomerModal").classList.remove("hidden");
+    }
+
+    function closeNewCustomerModal() {
+        document.getElementById("newCustomerModal").classList.add("hidden");
+    }
+
+    function openPayDebtModal(id, name, debt) {
+        document.getElementById("payDebtCustomerId").value = id;
+        document.getElementById("payDebtCustomerName").innerText = name;
+        activeCustomerDebt = debt;
+        document.getElementById("payDebtCurrentAmount").innerText = Number(debt).toLocaleString('ru-RU') + " so'm";
+        document.getElementById("payDebtAmountInput").value = debt;
+        document.getElementById("payDebtNoteInput").value = "Qarz to'lovi";
+        document.getElementById("payDebtModal").classList.remove("hidden");
+    }
+
+    function closePayDebtModal() {
+        document.getElementById("payDebtModal").classList.add("hidden");
+    }
+
+    function setFullPayDebt() {
+        document.getElementById("payDebtAmountInput").value = activeCustomerDebt;
+    }
+
+    async function submitPayDebt() {
+        const id = document.getElementById("payDebtCustomerId").value;
+        const amount = parseFloat(document.getElementById("payDebtAmountInput").value) || 0;
+        const methodEl = document.querySelector('input[name="payDebtMethod"]:checked');
+        const method = methodEl ? methodEl.value : 'naqd';
+        const note = document.getElementById("payDebtNoteInput").value;
+        const btn = document.getElementById("submitPayDebtBtn");
+
+        if (amount <= 0) {
+            alert("To'lov summasi musbat bo'lishi kerak!");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saqlanmoqda...</span>`;
+
+        try {
+            const resp = await fetch(`/api/customer/${id}/pay-debt`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount, payment_method: method, note })
+            });
+            const res = await resp.json();
+            if (res.success) {
+                closePayDebtModal();
+                if (typeof showToast === 'function') {
+                    showToast(res.message, "success");
+                } else {
+                    alert(res.message);
+                }
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                alert(res.message || "Xatolik yuz berdi!");
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> <span>To'lovni Tasdiqlash</span>`;
+            }
+        } catch (e) {
+            alert("Aloqa xatosi!");
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> <span>To'lovni Tasdiqlash</span>`;
+        }
+    }
+</script>
+{% endblock %}

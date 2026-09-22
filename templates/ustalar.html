@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Ustalar va Prorablar Boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black uppercase tracking-wider mb-2">
+                <i class="fa-solid fa-star text-amber-500"></i>
+                <span>Hamkorlik & KPI Tizimi</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center text-lg shadow-md shadow-amber-500/20">
+                    <i class="fa-solid fa-helmet-safety"></i>
+                </div>
+                <span>Ustalar va Prorablar Boshqaruvi</span>
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">
+                Do'konga mijoz olib keluvchi ustalarni kiritish, aloqa ma'lumotlarini boshqarish va KPI reytingini kuzatish
+            </p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="/kpi" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black px-4 py-2.5 rounded-2xl text-xs shadow-md shadow-amber-500/20 transition">
+                <i class="fa-solid fa-trophy"></i>
+                <span>Ustalar KPI Reytingi & Bonusi</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 3 Bento Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+            <div class="space-y-1">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Jami Ustalar & Prorablar</span>
+                <p class="text-2xl font-black text-slate-900 tracking-tight">{{ total_ustalar }} <span class="text-xs font-semibold text-slate-400">nafar</span></p>
+                <span class="text-[11px] text-amber-600 font-bold inline-flex items-center">
+                    <i class="fa-solid fa-user-check mr-1"></i> Ro'yxatdagi hamkorlar
+                </span>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl border border-amber-100 flex-shrink-0">
+                <i class="fa-solid fa-helmet-safety"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+            <div class="space-y-1">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Jalb Qilingan Mijozlar</span>
+                <p class="text-2xl font-black text-slate-900 tracking-tight">{{ total_clients_referred }} <span class="text-xs font-semibold text-slate-400">ta</span></p>
+                <span class="text-[11px] text-sky-600 font-bold inline-flex items-center">
+                    <i class="fa-solid fa-users mr-1"></i> Ustalar orqali kelgan
+                </span>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl border border-sky-100 flex-shrink-0">
+                <i class="fa-solid fa-people-group"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex items-center justify-between">
+            <div class="space-y-1">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Yaratilgan Savdo Tushumi</span>
+                <p class="text-2xl font-black text-slate-900 tracking-tight">{{ "{:,.0f}".format(total_sales_generated).replace(",", " ") }} <span class="text-xs font-semibold text-slate-400">so'm</span></p>
+                <span class="text-[11px] text-emerald-600 font-bold inline-flex items-center">
+                    <i class="fa-solid fa-sack-dollar mr-1"></i> Hamkorlik natijasi
+                </span>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl border border-emerald-100 flex-shrink-0">
+                <i class="fa-solid fa-chart-line"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2 Column Layout: Add Usta Form & Ustalar Table -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: Add New Usta Form (4 Cols) -->
+        <div class="lg:col-span-4">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 sticky top-4">
+                <h2 class="font-bold text-slate-800 text-base mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-user-plus text-amber-600"></i>
+                    <span>Yangi Usta Qo'shish</span>
+                </h2>
+
+                <form method="POST" action="/admin/ustalar/qoshish" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Usta / Prorab F.I.Sh <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="full_name" required placeholder="Masalan: Sardor Usta" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-medium">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Telefon Raqami
+                        </label>
+                        <input type="tel" name="phone" placeholder="+998 90 123 45 67" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Mutaxassislik Toifasi <span class="text-rose-500">*</span>
+                        </label>
+                        <select name="customer_type" required class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-semibold">
+                            <option value="usta" selected>👷 Usta / Plitochnik</option>
+                            <option value="prorab">🏗️ Prorab / Quruvchi</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Qo'shimcha Izoh / Manzil
+                        </label>
+                        <input type="text" name="notes" placeholder="Masalan: Yunusobod brigadasi" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500">
+                    </div>
+
+                    <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-sm mt-4">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Ustani Saqlash</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right: Ustalar Table (8 Cols) -->
+        <div class="lg:col-span-8">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <h2 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                        <i class="fa-solid fa-list-check text-amber-600"></i>
+                        <span>Ro'yxatdagi Barcha Ustalar ({{ ustalar|length }})</span>
+                    </h2>
+                    <!-- Live search in table -->
+                    <div class="relative w-full sm:w-64">
+                        <input type="text" id="filterUstalarInput" oninput="filterAdminUstalar(this.value)" placeholder="Usta nomi yoki tel..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 font-medium">
+                        <i class="fa-solid fa-search absolute left-2.5 top-2 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm" id="adminUstalarTable">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                            <tr>
+                                <th class="py-3 px-3 rounded-l-xl">Usta / Prorab</th>
+                                <th class="py-3 px-3">Telefon</th>
+                                <th class="py-3 px-3">Toifasi</th>
+                                <th class="py-3 px-3 text-center">Klientlari</th>
+                                <th class="py-3 px-3">Qo'shilgan</th>
+                                <th class="py-3 px-3 rounded-r-xl text-right">Amallar</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% if ustalar %}
+                                {% for u in ustalar %}
+                                <tr class="admin-usta-row hover:bg-slate-50 transition" data-name="{{ u.full_name|lower }}" data-phone="{{ u.phone or '' }}">
+                                    <td class="py-3 px-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white bg-gradient-to-br from-amber-500 to-orange-600 shadow-2xs">
+                                                {{ u.full_name[:1].upper() }}
+                                            </div>
+                                            <div>
+                                                <span class="font-bold text-slate-900 block text-sm">{{ u.full_name }}</span>
+                                                {% if u.notes %}
+                                                <span class="text-[10px] text-slate-400 block truncate max-w-[180px]">{{ u.notes }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3 font-mono text-xs text-slate-600 font-semibold">{{ u.phone or 'Tel kiritilmagan' }}</td>
+                                    <td class="py-3 px-3">
+                                        <span class="px-2.5 py-1 rounded-full text-xs font-bold {% if u.customer_type == 'prorab' %}bg-purple-100 text-purple-800 border border-purple-200{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">
+                                            {% if u.customer_type == 'prorab' %}🏗️ Prorab{% else %}👷 Usta{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-3 text-center">
+                                        <span class="inline-block px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-900 font-bold font-mono text-xs border border-amber-200">
+                                            {{ u.clients_count or 0 }} ta mijoz
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-3 text-xs text-slate-400 font-mono">{{ u.created_at[:10] if u.created_at else '—' }}</td>
+                                    <td class="py-3 px-3 text-right">
+                                        <div class="flex items-center justify-end space-x-2">
+                                            <a href="/kpi?period=all" class="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 transition" title="KPI reytingini ko'rish">
+                                                <i class="fa-solid fa-trophy text-xs"></i>
+                                            </a>
+                                            <button type="button" onclick="confirmDeleteUsta({{ u.id }}, '{{ u.full_name }}')" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition" title="O'chirish">
+                                                <i class="fa-solid fa-trash-can text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-slate-400">
+                                        <p class="font-bold">Hozircha ustalar kiritilmagan.</p>
+                                        <p class="text-xs mt-1">Chap tarafdagi forma orqali yangi usta yoki prorab qo'shishingiz mumkin.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDeleteUsta(ustaId, ustaName) {
+    if (typeof showConfirmModal === 'function') {
+        showConfirmModal({
+            title: "Ustani o'chirish",
+            message: `Rostdan ham '${ustaName}' ustasini tizimdan o'chirmoqchimisiz?`,
+            icon: "fa-solid fa-trash-can text-rose-500",
+            confirmText: "Ha, O'chirish",
+            confirmClass: "px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-500 text-white shadow-md transition",
+            onConfirm: () => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/admin/ustalar/ochirish/${ustaId}`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    } else {
+        if (confirm(`Rostdan ham '${ustaName}' ustasini o'chirmoqchimisiz?`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/ustalar/ochirish/${ustaId}`;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+}
+
+function filterAdminUstalar(query) {
+    const q = (query || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('.admin-usta-row');
+    rows.forEach(r => {
+        const name = r.getAttribute('data-name') || '';
+        const phone = r.getAttribute('data-phone') || '';
+        if (!q || name.includes(q) || phone.includes(q)) {
+            r.style.display = '';
+        } else {
+            r.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

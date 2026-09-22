@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}Nakladnoy {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-3">
+    <!-- Breadcrumb & Top Print Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-0.5">
+        <div class="flex items-center space-x-2 text-xs text-slate-500 font-medium">
+            <a href="/nakladnoylar" class="hover:text-sky-600 flex items-center space-x-1">
+                <i class="fa-solid fa-arrow-left text-[10px]"></i>
+                <span>Nakladnoylar</span>
+            </a>
+            <span>&rsaquo;</span>
+            <span class="text-slate-800 font-bold font-mono">{{ order.order_number }}</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="/nakladnoy/{{ order.id }}/chek" target="_blank" class="bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 border border-slate-200 shadow-2xs">
+                <i class="fa-solid fa-receipt text-sky-600 text-xs"></i>
+                <span>80mm Chek</span>
+            </a>
+            <a href="/nakladnoy/{{ order.id }}/print" target="_blank" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
+                <i class="fa-solid fa-print text-xs"></i>
+                <span>A4 Nakladnoy</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/90 space-y-3.5">
+        
+        <!-- Order Header (Number, Status, Customer) -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-b border-slate-100 pb-3">
+            <div>
+                <div class="flex items-center space-x-2.5">
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">{{ order.order_number }}</h1>
+                    {% if order.status == 'tolandi' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200/60">
+                        <i class="fa-solid fa-truck-ramp-box mr-1 text-[11px]"></i> Chiqarilishi kerak
+                    </span>
+                    {% elif order.status == 'yuk_berildi' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200/60">
+                        <i class="fa-solid fa-check mr-1 text-[11px]"></i> Yuk berilgan
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Sana va vaqt: <span class="font-medium text-slate-600">{{ order.created_at }}</span></p>
+            </div>
+
+            <!-- Customer & Payment badges -->
+            <div class="sm:text-right flex sm:flex-col items-baseline sm:items-end justify-between gap-1">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400 mr-1.5 sm:mr-0 sm:block">Xaridor:</span>
+                    <span class="text-xs sm:text-sm font-bold text-slate-800">{{ order.customer_name or 'Mijoz' }}</span>
+                    {% if order.customer_phone %}<span class="inline-block sm:block text-[11px] font-mono text-slate-500 ml-1.5 sm:ml-0">{{ order.customer_phone }}</span>{% endif %}
+                </div>
+                <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                    To'lov: {{ order.payment_method|capitalize }} (To'langan)
+                </span>
+            </div>
+        </div>
+
+        <!-- Responsibility Meta Strip (Kim sotdi / Usta / Ombordan kim berdi) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 rounded-xl bg-slate-50/80 border border-slate-200">
+            <!-- Seller info -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-sm flex-shrink-0">
+                    <i class="fa-solid fa-user-tag"></i>
+                </div>
+                <div class="min-w-0">
+                    <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider leading-none">Kim Sotdi (Kassir):</span>
+                    <span class="text-xs font-black text-slate-900 block truncate mt-0.5">{{ order.seller_name or 'Sotuvchi (Kassir)' }}</span>
+                    <span class="text-[10px] text-slate-500 font-mono block truncate">
+                        Sotilgan: {{ order.created_at }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Usta / Prorab info -->
+            <div class="flex items-center space-x-2.5 sm:border-l sm:border-slate-200 sm:pl-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-sm flex-shrink-0">
+                    <i class="fa-solid fa-helmet-safety"></i>
+                </div>
+                <div class="min-w-0">
+                    <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider leading-none">Biriktirilgan Usta:</span>
+                    {% if usta %}
+                    <span class="text-xs font-black text-amber-900 block truncate mt-0.5">{{ usta.full_name }}</span>
+                    <span class="text-[10px] text-amber-700 font-mono block truncate">{{ usta.phone or 'Tel kiritilmagan' }}</span>
+                    {% else %}
+                    <span class="text-xs font-semibold text-slate-400 block mt-0.5">Usta biriktirilmagan</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Warehouse Dispatcher info -->
+            <div class="flex items-center space-x-2.5 sm:border-l sm:border-slate-200 sm:pl-3">
+                <div class="w-8 h-8 rounded-lg {% if order.status == 'yuk_berildi' %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %} flex items-center justify-center text-sm flex-shrink-0">
+                    <i class="fa-solid {% if order.status == 'yuk_berildi' %}fa-truck-ramp-box{% else %}fa-hourglass-half{% endif %}"></i>
+                </div>
+                <div class="min-w-0">
+                    <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider leading-none">Ombordan Kim Berdi:</span>
+                    {% if order.status == 'yuk_berildi' %}
+                    <span class="text-xs font-black text-emerald-800 block truncate mt-0.5">{{ order.dispatched_by or 'Omborchi' }}</span>
+                    <span class="text-[10px] text-slate-500 font-mono block truncate">
+                        Topshirilgan: {{ order.dispatched_at }}
+                    </span>
+                    {% else %}
+                    <span class="text-xs font-bold text-amber-800 block truncate mt-0.5">Kutilmoqda</span>
+                    <span class="text-[10px] text-slate-400 block truncate">Hali topshirilmagan</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Items to Dispatch Table -->
+        <div class="space-y-2">
+            <h3 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center space-x-1.5">
+                <i class="fa-solid fa-boxes-stacked text-sky-600"></i>
+                <span>Ombordan Chiqariladigan Kafellar Ro'yxati</span>
+            </h3>
+
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
+                        <tr>
+                            <th class="py-2.5 px-3">Kafel Rasmi &amp; Markasi</th>
+                            <th class="py-2.5 px-3">O'lchami</th>
+                            <th class="py-2.5 px-3">Ombor Joyi</th>
+                            <th class="py-2.5 px-3 text-right">Berilishi Kerak</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        {% for itm in items %}
+                        <tr class="hover:bg-slate-50/70 transition">
+                            <td class="py-2.5 px-3 flex items-center space-x-2.5">
+                                <div class="w-12 h-12 rounded-lg bg-slate-50 overflow-hidden border border-slate-200 flex-shrink-0 flex items-center justify-center p-0.5 relative group shadow-2xs">
+                                    {% if itm.image_path %}
+                                    <img src="{{ itm.image_path }}" class="max-h-full max-w-full object-contain rounded cursor-pointer hover:opacity-90 transition" onclick="openTileImageModal(this.src)" title="Kattalashtirish uchun bosing">
+                                    {% else %}
+                                    <div class="w-full h-full flex items-center justify-center text-[10px] text-slate-400">Rasm yo'q</div>
+                                    {% endif %}
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="text-[9px] uppercase font-black text-sky-600 tracking-wider block">{{ itm.brand }}</span>
+                                    <h4 class="font-bold text-slate-900 text-xs leading-tight truncate">{{ itm.model_name }}</h4>
+                                    <span class="text-[10px] text-slate-400 font-mono">{{ itm.sku }}</span>
+                                </div>
+                            </td>
+                            <td class="py-2.5 px-3 font-semibold text-slate-700 whitespace-nowrap">
+                                {{ itm.size }}
+                            </td>
+                            <td class="py-2.5 px-3 whitespace-nowrap">
+                                {% if itm.location_rack %}
+                                <span class="inline-flex items-center text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                                    <i class="fa-solid fa-location-dot text-rose-500 mr-1 text-[10px]"></i>{{ itm.location_rack }}
+                                </span>
+                                {% else %}
+                                <span class="text-[11px] text-slate-400">Ko'rsatilmagan</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                                <span class="text-base sm:text-lg font-black text-emerald-600 block leading-tight">{{ itm.quantity }} {{ itm.unit }}</span>
+                                <span class="text-[10px] text-slate-400 font-medium">Jami: {{ "{:,.0f}".format(itm.total_price).replace(",", " ") }} so'm</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Total summary strip -->
+        <div class="p-2.5 px-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-600">Jami To'langan Summa:</span>
+            <span class="text-base sm:text-lg font-black text-slate-900">{{ "{:,.0f}".format(order.total_amount).replace(",", " ") }} so'm</span>
+        </div>
+
+        <!-- Warehouse Dispatch Action Block -->
+        {% if order.status == 'tolandi' %}
+        <div class="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 space-y-2.5">
+            <div class="flex items-start space-x-2.5">
+                <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
+                    <i class="fa-solid fa-dolly"></i>
+                </div>
+                <div class="text-xs">
+                    <h4 class="font-bold text-amber-900 leading-tight">Omborchi Diqqatiga!</h4>
+                    <p class="text-[11px] text-amber-800 mt-0.5">
+                        Yuk to'liq xaridorga chiqarib berilgach, pastdagi tugmani bosing. Shunda nakladnoy "Yuk berildi" holatiga o'tadi.
+                    </p>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1">
+                    Omborchi Izohi (Haydovchi, mashina raqami yoki xaridor qabul qilganligi):
+                </label>
+                <input type="text" id="dispatchNote" placeholder="Masalan: Damas 01 A 777 AA ga ortildi..." class="w-full px-3 py-1.5 text-xs bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium">
+            </div>
+
+            <!-- Tugma bosilganda Ha/Yo'q modali chiqadi -->
+            <button type="button" id="mainDispatchBtn" onclick="openDispatchModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 px-4 rounded-xl shadow-2xs hover:shadow-xs transition flex items-center justify-center space-x-2 text-xs sm:text-sm">
+                <i class="fa-solid fa-circle-check text-sm"></i>
+                <span>YUK CHIQARIB BERILDI (TASDIQLASH)</span>
+            </button>
+        </div>
+        {% else %}
+        <div class="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 flex items-start space-x-3 text-emerald-900">
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-base flex-shrink-0 mt-0.5">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="space-y-0.5 text-xs min-w-0">
+                <span class="font-black text-xs sm:text-sm block text-emerald-950">Ushbu buyurtma ombordan xaridorga to'liq berilgan!</span>
+                <p class="text-emerald-800 text-[11px]">
+                    Ombordan topshirdi: <b class="font-bold text-emerald-950">{{ order.dispatched_by or 'Omborchi' }}</b> &bull; 
+                    Topshirilgan vaqt: <span class="font-mono font-bold">{{ order.dispatched_at }}</span>
+                </p>
+                {% if order.warehouse_note %}
+                <p class="text-slate-700 bg-white/90 p-2 rounded-lg border border-emerald-200 mt-1 text-[11px]">
+                    <i class="fa-solid fa-message text-emerald-600 mr-1"></i> Omborchi izohi: {{ order.warehouse_note }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ==================== YUK CHIQARISHNI TASDIQLASH MODALI (HA / YO'Q) ==================== -->
+<div id="dispatchConfirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs transition-opacity" onclick="closeDispatchModal()">
+    <div class="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-3.5 animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+        <!-- Modal Sarlavhasi -->
+        <div class="flex items-start space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg flex-shrink-0 shadow-2xs">
+                <i class="fa-solid fa-truck-ramp-box"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="text-base font-black text-slate-900 leading-tight">Yuk Chiqarishni Tasdiqlash</h3>
+                <p class="text-xs text-slate-500 mt-1">Ushbu nakladnoydagi barcha kafellar xaridorga to'liq ortib berildimi?</p>
+            </div>
+            <button type="button" onclick="closeDispatchModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+        </div>
+
+        <!-- Buyurtma ma'lumotlari qisqacha -->
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/90 text-xs space-y-1.5">
+            <div class="flex justify-between items-center text-slate-600">
+                <span>Nakladnoy raqami:</span>
+                <span class="font-bold font-mono text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">{{ order.order_number }}</span>
+            </div>
+            <div class="flex justify-between items-center text-slate-600">
+                <span>Xaridor:</span>
+                <span class="font-bold text-slate-800">{{ order.customer_name or 'Mijoz' }}</span>
+            </div>
+            <div class="flex justify-between items-center text-slate-600">
+                <span>Jami to'langan summa:</span>
+                <span class="font-black text-emerald-600">{{ "{:,.0f}".format(order.total_amount).replace(",", " ") }} so'm</span>
+            </div>
+            <div id="modalNotePreview" class="hidden pt-1.5 border-t border-slate-200 text-slate-600 font-medium text-[11px] truncate"></div>
+        </div>
+
+        <!-- Amallar: YO'Q va HA tugmalari -->
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button type="button" onclick="closeDispatchModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 border border-slate-200">
+                <i class="fa-solid fa-xmark text-slate-400"></i>
+                <span>Yo'q (Bekor qilish)</span>
+            </button>
+            <button type="button" id="modalConfirmBtn" onclick="executeDispatchConfirmed({{ order.id }})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 px-4 rounded-xl text-xs shadow-xs hover:shadow transition flex items-center justify-center space-x-1.5">
+                <i class="fa-solid fa-check"></i>
+                <span>Ha, Tasdiqlash</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== TILE IMAGE LIGHTBOX MODAL ==================== -->
+<div id="tileImageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" onclick="closeTileImageModal()">
+    <div class="relative max-w-2xl max-h-[85vh] bg-white rounded-2xl overflow-hidden p-2 shadow-2xl flex flex-col items-center" onclick="event.stopPropagation()">
+        <button type="button" onclick="closeTileImageModal()" class="absolute top-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center transition shadow text-sm z-10">&times;</button>
+        <img id="tileModalImg" src="" class="max-h-[75vh] max-w-full object-contain rounded-xl">
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openDispatchModal() {
+    const note = document.getElementById('dispatchNote')?.value?.trim() || '';
+    const notePreview = document.getElementById('modalNotePreview');
+    if (notePreview) {
+        if (note) {
+            notePreview.textContent = "Omborchi izohi: " + note;
+            notePreview.classList.remove('hidden');
+        } else {
+            notePreview.classList.add('hidden');
+        }
+    }
+    const modal = document.getElementById('dispatchConfirmModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeDispatchModal() {
+    const modal = document.getElementById('dispatchConfirmModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+async function executeDispatchConfirmed(orderId) {
+    const note = document.getElementById('dispatchNote')?.value?.trim() || '';
+    const modalBtn = document.getElementById('modalConfirmBtn');
+    const mainBtn = document.getElementById('mainDispatchBtn');
+
+    if (modalBtn) {
+        modalBtn.disabled = true;
+        modalBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>Tasdiqlanmoqda...</span>`;
+    }
+    if (mainBtn) {
+        mainBtn.disabled = true;
+        mainBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>Topshirilmoqda...</span>`;
+    }
+
+    try {
+        const res = await fetch(`/api/order/${orderId}/dispatch`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ note })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showToast === 'function') {
+                showToast(data.message, 'success');
+            }
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            if (typeof showToast === 'function') {
+                showToast("Xatolik: " + data.message, 'danger');
+            } else {
+                alert("Xatolik: " + data.message);
+            }
+            if (modalBtn) {
+                modalBtn.disabled = false;
+                modalBtn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Ha, Tasdiqlash</span>`;
+            }
+            if (mainBtn) {
+                mainBtn.disabled = false;
+                mainBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>YUK CHIQARIB BERILDI (TASDIQLASH)</span>`;
+            }
+            closeDispatchModal();
+        }
+    } catch (err) {
+        if (typeof showToast === 'function') {
+            showToast("Server bilan aloqa uzildi: " + err.message, 'danger');
+        } else {
+            alert("Server xatosi: " + err.message);
+        }
+        if (modalBtn) {
+            modalBtn.disabled = false;
+            modalBtn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Ha, Tasdiqlash</span>`;
+        }
+        if (mainBtn) {
+            mainBtn.disabled = false;
+            mainBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>YUK CHIQARIB BERILDI (TASDIQLASH)</span>`;
+        }
+        closeDispatchModal();
+    }
+}
+
+// Lightbox modal helpers
+function openTileImageModal(src) {
+    if (!src) return;
+    const m = document.getElementById('tileImageModal');
+    const img = document.getElementById('tileModalImg');
+    if (m && img) {
+        img.src = src;
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+    }
+}
+
+function closeTileImageModal() {
+    const m = document.getElementById('tileImageModal');
+    if (m) {
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeDispatchModal();
+        closeTileImageModal();
+    }
+});
+</script>
+{% endblock %}

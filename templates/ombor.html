@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+
+{% block title %}Ombor - Kafellar Zaxirasi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-sky-600 mb-1">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <span>Zaxira & Logistika</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
+                <span>Ombor - Kafellar Boshqaruvi</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">Ombordagi barcha kafellar zaxirasi, qoldiqlar va QR kod stikerlari</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="/ombor/siniqlar" class="inline-flex items-center space-x-2 bg-white hover:bg-rose-50 text-rose-700 font-bold px-4 py-2.5 rounded-2xl border border-rose-200 shadow-sm transition text-xs sm:text-sm">
+                <i class="fa-solid fa-heart-crack text-rose-500"></i>
+                <span>Siniqlar & Brak Bo'limi</span>
+            </a>
+            <a href="/ombor/yangi" class="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black px-5 py-2.5 rounded-2xl shadow-lg shadow-emerald-600/20 transition text-xs sm:text-sm">
+                <i class="fa-solid fa-plus text-base"></i>
+                <span>Yangi Kafel Kirim Qilish</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <form method="GET" action="/ombor" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- Search input with Instant Client Filter -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Qidiruv</label>
+                <div class="relative">
+                    <input type="text" name="q" id="omborSearchInput" oninput="filterOmborClientSide(this.value)" value="{{ q }}" placeholder="Marka, model, SKU, o'lcham..." class="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition font-medium">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+                    <button type="button" onclick="document.getElementById('omborSearchInput').value=''; filterOmborClientSide('');" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold leading-none">&times;</button>
+                </div>
+            </div>
+
+            <!-- Brand filter -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Marka bo'yicha</label>
+                <select name="brand" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition font-medium">
+                    <option value="">Barcha markalar</option>
+                    {% for b in brands %}
+                    <option value="{{ b }}" {% if brand_filter == b %}selected{% endif %}>{{ b }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Stock status filter -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Qoldiq holati</label>
+                <select name="status" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition font-medium">
+                    <option value="">Barchasi</option>
+                    <option value="low" {% if stock_status == 'low' %}selected{% endif %}>Kam qolganlar (&le; min)</option>
+                    <option value="out" {% if stock_status == 'out' %}selected{% endif %}>Tugaganlar (0 m²)</option>
+                </select>
+            </div>
+
+            <!-- Filter submit button -->
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-2 shadow-sm">
+                    <i class="fa-solid fa-filter"></i>
+                    <span>Filtrlash</span>
+                </button>
+                {% if q or brand_filter or stock_status %}
+                <a href="/ombor" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 px-3 rounded-xl text-xs transition" title="Filtrlarni tozalash">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
+        <!-- Quick Size Filter Pills -->
+        <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                <span class="text-slate-400 mr-1">O'lchamlar:</span>
+                <a href="/ombor" class="px-2.5 py-1 rounded-lg {% if not q %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">Barchasi</a>
+                <a href="/ombor?q=60x120" class="px-2.5 py-1 rounded-lg {% if q == '60x120' %}bg-sky-600 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">60x120</a>
+                <a href="/ombor?q=60x60" class="px-2.5 py-1 rounded-lg {% if q == '60x60' %}bg-sky-600 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">60x60</a>
+                <a href="/ombor?q=30x60" class="px-2.5 py-1 rounded-lg {% if q == '30x60' %}bg-sky-600 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">30x60</a>
+                <a href="/ombor?q=80x80" class="px-2.5 py-1 rounded-lg {% if q == '80x80' %}bg-sky-600 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">80x80</a>
+            </div>
+
+            <!-- View Switcher (Grid vs Table) -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button type="button" onclick="setOmborView('grid')" id="gridBtn" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition">
+                    <i class="fa-solid fa-grip mr-1"></i> Kartochka
+                </button>
+                <button type="button" onclick="setOmborView('table')" id="tableBtn" class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 transition">
+                    <i class="fa-solid fa-list mr-1"></i> Jadval
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Display Area -->
+    {% if products %}
+    <!-- 1. Grid Cards View -->
+    <div id="omborGridView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for p in products %}
+        <div class="ombor-card bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-200/80 card-hover flex flex-col justify-between" data-search="{{ p.brand|lower }} {{ p.model_name|lower }} {{ p.sku|lower }} {{ p.size|lower }} {{ (p.location_rack or '')|lower }}">
+            <div>
+                <!-- Top image & Badges -->
+                <div class="relative h-48 bg-slate-100 overflow-hidden border-b border-slate-100">
+                    {% if p.image_path %}
+                    <img src="{{ p.image_path }}" alt="{{ p.brand }} {{ p.model_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                        <i class="fa-solid fa-image text-3xl mb-1"></i>
+                        <span class="text-xs">Rasm yo'q</span>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Brand pill -->
+                    <span class="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-sm text-white text-xs font-black uppercase px-3 py-1 rounded-xl shadow-sm">
+                        {{ p.brand }}
+                    </span>
+
+                    <!-- Stock status badge -->
+                    <div class="absolute top-3 right-3">
+                        {% if p.quantity_in_stock <= 0 %}
+                        <span class="bg-rose-600 text-white text-xs font-black px-3 py-1 rounded-xl shadow-sm">
+                            Tugagan
+                        </span>
+                        {% elif p.quantity_in_stock <= p.min_quantity %}
+                        <span class="bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-xl shadow-sm">
+                            Kam: {{ p.quantity_in_stock }} {{ p.unit }}
+                        </span>
+                        {% else %}
+                        <span class="bg-emerald-600 text-white text-xs font-black px-3 py-1 rounded-xl shadow-sm">
+                            {{ p.quantity_in_stock }} {{ p.unit }}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Rack / Location info -->
+                    {% if p.location_rack %}
+                    <span class="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-slate-800 text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-sm border border-slate-200">
+                        <i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>{{ p.location_rack }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Info Body -->
+                <div class="p-5">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <h3 class="font-black text-slate-900 text-base leading-snug">{{ p.model_name }}</h3>
+                            <span class="text-xs text-slate-400 font-mono">{{ p.sku }}</span>
+                        </div>
+                        <span class="text-xs font-black bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl">
+                            {{ p.size }}
+                        </span>
+                    </div>
+
+                    <!-- Specs details -->
+                    <div class="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <div>
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold">1 Quti maydoni:</span>
+                            <span class="font-bold text-slate-800">{{ p.box_size_m2 }} m² ({{ p.pieces_per_box }} dona)</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Qutilar hisobida:</span>
+                            <span class="font-bold text-sky-700">~{{ "%.1f"|format(p.quantity_in_stock / p.box_size_m2) if p.box_size_m2 else 0 }} quti</span>
+                        </div>
+                    </div>
+
+                    <!-- Price & Stock section -->
+                    <div class="mt-4 flex items-baseline justify-between pt-1">
+                        <div>
+                            <span class="text-[10px] text-slate-400 uppercase font-bold block">Narxi (1 {{ p.unit }}):</span>
+                            <span class="text-xl font-black text-slate-900">{{ "{:,.0f}".format(p.price).replace(",", " ") }}</span>
+                            <span class="text-xs text-slate-500 font-medium">so'm</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-400 uppercase font-bold block">Omborda:</span>
+                            <span class="text-lg font-black {% if p.quantity_in_stock <= p.min_quantity %}text-rose-600{% else %}text-emerald-600{% endif %}">
+                                {{ p.quantity_in_stock }} {{ p.unit }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Footer -->
+            <div class="p-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                <a href="/ombor/qr/{{ p.id }}" class="inline-flex items-center justify-center space-x-1 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs py-2 px-2.5 rounded-xl border border-slate-200 transition shadow-xs" title="QR Stiker chiqarish">
+                    <i class="fa-solid fa-qrcode text-sky-600"></i>
+                    <span>QR</span>
+                </a>
+                <button type="button" onclick="openReportDefectModal({{ p.id }}, '{{ p.brand|escape }}', '{{ p.model_name|escape }}', '{{ p.unit }}', {{ p.quantity_in_stock }})" class="inline-flex items-center justify-center space-x-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs py-2 px-2.5 rounded-xl border border-rose-200 transition shadow-xs" title="Siniq kafelni siniqlar bo'limiga o'tkazish">
+                    <i class="fa-solid fa-heart-crack text-rose-500"></i>
+                    <span>Brak</span>
+                </button>
+                <a href="/ombor/tahrirlash/{{ p.id }}" class="flex-1 inline-flex items-center justify-center space-x-1 bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-xs py-2 px-2.5 rounded-xl border border-sky-200 transition">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>Tahrirlash</span>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 2. Responsive Table View -->
+    <div id="omborTableView" class="hidden bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                <tr>
+                    <th class="py-3 px-3 rounded-l-xl">Kafel</th>
+                    <th class="py-3 px-3">O'lcham</th>
+                    <th class="py-3 px-3">Ombor Joyi</th>
+                    <th class="py-3 px-3 text-center">1 Quti</th>
+                    <th class="py-3 px-3 text-right">Narxi</th>
+                    <th class="py-3 px-3 text-right">Qoldiq</th>
+                    <th class="py-3 px-3 rounded-r-xl text-right">Amallar</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for p in products %}
+                <tr class="ombor-row hover:bg-slate-50 transition" data-search="{{ p.brand|lower }} {{ p.model_name|lower }} {{ p.sku|lower }} {{ p.size|lower }} {{ (p.location_rack or '')|lower }}">
+                    <td class="py-3 px-3 flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 flex-shrink-0">
+                            {% if p.image_path %}
+                            <img src="{{ p.image_path }}" class="w-full h-full object-cover">
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center text-[10px] text-slate-400">Rasm</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-black uppercase text-sky-600 block">{{ p.brand }}</span>
+                            <span class="font-bold text-slate-900 block text-xs sm:text-sm">{{ p.model_name }}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ p.sku }}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-3 text-xs font-bold text-slate-700">{{ p.size }}</td>
+                    <td class="py-3 px-3 text-xs text-slate-600">
+                        {% if p.location_rack %}
+                        <span class="inline-flex items-center text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                            <i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>{{ p.location_rack }}
+                        </span>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="py-3 px-3 text-center text-xs font-semibold text-slate-600">
+                        {{ p.box_size_m2 }} m² ({{ p.pieces_per_box }} dona)
+                    </td>
+                    <td class="py-3 px-3 text-right font-black font-mono text-slate-900">
+                        {{ "{:,.0f}".format(p.price).replace(",", " ") }} so'm
+                    </td>
+                    <td class="py-3 px-3 text-right">
+                        <span class="font-black text-sm {% if p.quantity_in_stock <= p.min_quantity %}text-rose-600{% else %}text-emerald-600{% endif %}">
+                            {{ p.quantity_in_stock }} {{ p.unit }}
+                        </span>
+                        <span class="block text-[10px] text-slate-400">~{{ "%.1f"|format(p.quantity_in_stock / p.box_size_m2) if p.box_size_m2 else 0 }} quti</span>
+                    </td>
+                    <td class="py-3 px-3 text-right space-x-1">
+                        <a href="/ombor/qr/{{ p.id }}" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-1.5 rounded-xl transition inline-flex items-center space-x-1" title="QR Stiker">
+                            <i class="fa-solid fa-qrcode text-sky-600"></i>
+                            <span>QR</span>
+                        </a>
+                        <button type="button" onclick="openReportDefectModal({{ p.id }}, '{{ p.brand|escape }}', '{{ p.model_name|escape }}', '{{ p.unit }}', {{ p.quantity_in_stock }})" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold px-2 py-1.5 rounded-xl border border-rose-200 transition inline-flex items-center space-x-1" title="Siniq/Defekt kafelni siniqlar bo'limiga o'tkazish">
+                            <i class="fa-solid fa-heart-crack text-rose-500"></i>
+                            <span>Brak</span>
+                        </button>
+                        <a href="/ombor/tahrirlash/{{ p.id }}" class="text-xs bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold px-2.5 py-1.5 rounded-xl transition inline-flex items-center space-x-1" title="Tahrirlash">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-3xl p-12 text-center border border-slate-200">
+        <i class="fa-solid fa-box-open text-5xl text-slate-300 mb-3"></i>
+        <h3 class="text-lg font-bold text-slate-700">Kafellar topilmadi</h3>
+        <p class="text-sm text-slate-400 mt-1">Qidiruv so'rovi bo'yicha hech qanday mahsulot chiqmadi yoki ombor bo'sh.</p>
+        <a href="/ombor/yangi" class="mt-4 inline-flex items-center space-x-2 bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-sm shadow">
+            <i class="fa-solid fa-plus"></i>
+            <span>Birinchi kafelni kiritish</span>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function setOmborView(mode) {
+    const gridView = document.getElementById("omborGridView");
+    const tableView = document.getElementById("omborTableView");
+    const gridBtn = document.getElementById("gridBtn");
+    const tableBtn = document.getElementById("tableBtn");
+
+    if (mode === 'table') {
+        if (gridView) gridView.classList.add("hidden");
+        if (tableView) tableView.classList.remove("hidden");
+        gridBtn.className = "px-2.5 py-1 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 transition";
+        tableBtn.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition";
+        localStorage.setItem("ombor_view_mode", "table");
+    } else {
+        if (gridView) gridView.classList.remove("hidden");
+        if (tableView) tableView.classList.add("hidden");
+        gridBtn.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition";
+        tableBtn.className = "px-2.5 py-1 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 transition";
+        localStorage.setItem("ombor_view_mode", "grid");
+    }
+}
+
+function filterOmborClientSide(val) {
+    val = (val || '').trim().toLowerCase();
+    const cards = document.querySelectorAll('.ombor-card');
+    const rows = document.querySelectorAll('.ombor-row');
+    cards.forEach(c => {
+        const text = c.getAttribute('data-search') || '';
+        if (!val || text.includes(val)) c.classList.remove('hidden');
+        else c.classList.add('hidden');
+    });
+    rows.forEach(r => {
+        const text = r.getAttribute('data-search') || '';
+        if (!val || text.includes(val)) r.classList.remove('hidden');
+        else r.classList.add('hidden');
+    });
+}
+
+// Restore saved view preference
+document.addEventListener("DOMContentLoaded", () => {
+    const saved = localStorage.getItem("ombor_view_mode");
+    if (saved === "table") {
+        setOmborView("table");
+    }
+});
+
+let activeDefectStock = 0;
+function openReportDefectModal(id, brand, model, unit, currentStock) {
+    document.getElementById("defectProductId").value = id;
+    document.getElementById("defectModalSubtitle").innerText = `${brand} - ${model}`;
+    document.getElementById("defectCurrentStock").innerText = `${currentStock} ${unit}`;
+    document.getElementById("defectUnitLabel").innerText = unit;
+    document.getElementById("defectQuantityInput").value = "1";
+    document.getElementById("defectResponsibleInput").value = "";
+    document.getElementById("defectNoteInput").value = "";
+    activeDefectStock = currentStock;
+    document.getElementById("reportDefectModal").classList.remove("hidden");
+}
+
+function closeReportDefectModal() {
+    document.getElementById("reportDefectModal").classList.add("hidden");
+}
+
+async function submitReportDefect() {
+    const productId = document.getElementById("defectProductId").value;
+    const quantity = parseFloat(document.getElementById("defectQuantityInput").value) || 0;
+    const reason = document.getElementById("defectReasonSelect").value;
+    const responsible = document.getElementById("defectResponsibleInput").value.trim();
+    const discountedPrice = parseFloat(document.getElementById("defectDiscountedPriceInput").value) || 0;
+    const note = document.getElementById("defectNoteInput").value.trim();
+    const btn = document.getElementById("submitDefectBtn");
+
+    if (quantity <= 0) {
+        alert("Singan miqdor 0 dan katta bo'lishi kerak!");
+        return;
+    }
+
+    if (quantity > activeDefectStock) {
+        alert(`Omborda faqat ${activeDefectStock} mavjud. Undan ko'pini brak qilib bo'lmaydi!`);
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>O'tkazilmoqda...</span>`;
+
+    try {
+        const resp = await fetch(`/api/product/${productId}/report-defect`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                quantity: quantity,
+                reason: reason,
+                responsible_person: responsible,
+                discounted_price: discountedPrice,
+                note: note
+            })
+        });
+        const res = await resp.json();
+        if (res.success) {
+            closeReportDefectModal();
+            if (typeof showToast === 'function') {
+                showToast(res.message, "success");
+            } else {
+                alert(res.message);
+            }
+            setTimeout(() => window.location.reload(), 700);
+        } else {
+            alert(res.message || "Xatolik yuz berdi!");
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-burst"></i> <span>Siniqlar Bo'limiga O'tkazish</span>`;
+        }
+    } catch (e) {
+        alert("Server bilan aloqa xatosi!");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-burst"></i> <span>Siniqlar Bo'limiga O'tkazish</span>`;
+    }
+}
+</script>
+
+<!-- MODAL: Kafelni Siniq / Brak Bo'limiga O'tkazish -->
+<div id="reportDefectModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-heart-crack"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-base leading-tight">Siniq / Brak Kafel Qayd Etish</h3>
+                    <p class="text-xs text-slate-400" id="defectModalSubtitle">Kafel</p>
+                </div>
+            </div>
+            <button onclick="closeReportDefectModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="space-y-3.5 text-xs">
+            <input type="hidden" id="defectProductId">
+
+            <!-- Stock Info Banner -->
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center">
+                <span class="text-[11px] font-bold uppercase text-slate-500">Hozirgi Ombor Qoldig'i:</span>
+                <span id="defectCurrentStock" class="text-base font-black text-emerald-600 font-mono">0 m²</span>
+            </div>
+
+            <!-- Quantity input -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Singan / Defekt Miqdor *</label>
+                <div class="flex items-center space-x-2">
+                    <input type="number" id="defectQuantityInput" value="1" step="0.1" min="0.1" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-black text-base focus:outline-none focus:border-rose-500 focus:bg-white text-slate-900">
+                    <span id="defectUnitLabel" class="font-bold text-slate-500 text-sm">m²</span>
+                </div>
+            </div>
+
+            <!-- Reason dropdown -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Singanlik Sababi *</label>
+                <select id="defectReasonSelect" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-rose-500 focus:bg-white text-slate-800">
+                    <option value="Yuk tushirishda sindi (yuklovchilar)">🚛 Yuk tushirishda sindi (yuklovchilar tomonidan)</option>
+                    <option value="Pachka ichidan defekt chiqdi (zavod braki)">📦 Pachka ichidan defekt chiqdi (zavod braki)</option>
+                    <option value="Ombor ichida tashish paytida sindi">🏢 Ombor ichida tashish paytida sinib qoldi</option>
+                    <option value="Mijoz qaytargan (singan)">↩️ Mijoz qaytargan (singan/zararlangan)</option>
+                    <option value="Boshqa sabab">⚠️ Boshqa sabab</option>
+                </select>
+            </div>
+
+            <!-- Responsible person -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Kim Tomonidan Sindirildi? (Mas'ul Shaxs)</label>
+                <input type="text" id="defectResponsibleInput" placeholder="Masalan: 'Yuklovchi Akmal', 'Haydovchi', 'Kompaniya hisobidan'..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-rose-500 focus:bg-white text-slate-900">
+            </div>
+
+            <!-- Discounted sale price input -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Siniq Kafel Sotuv Narxi (1 birlik uchun, so'm)</label>
+                <input type="number" id="defectDiscountedPriceInput" step="1000" min="0" placeholder="Bo'sh qolsa asl narxning 50% belgilanadi" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold focus:outline-none focus:border-rose-500 focus:bg-white text-slate-900">
+            </div>
+
+            <!-- Note -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Qo'shimcha Izoh</label>
+                <textarea id="defectNoteInput" rows="2" placeholder="Kafel burchagi uchgan, yorilgan yoki butunlay singan..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-rose-500 focus:bg-white text-slate-900"></textarea>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-rose-50 text-[11px] text-rose-700 leading-tight border border-rose-200">
+                * Tasdiqlangach, ushbu miqdor asosiy ombor qoldig'idan <b>avtomatik ayiriladi</b> va Siniqlar Bo'limiga o'tkaziladi.
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closeReportDefectModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Bekor qilish</button>
+                <button type="button" onclick="submitReportDefect()" id="submitDefectBtn" class="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-burst"></i>
+                    <span>Siniqlar Bo'limiga O'tkazish</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.brand }} {{ product.model_name }} - Tahrirlash{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-2.5">
+    <!-- Breadcrumb & Sarlavha (Ixcham) -->
+    <div class="flex items-center justify-between gap-2 pb-0.5">
+        <div class="flex items-center space-x-1.5 text-xs text-slate-500 font-medium">
+            <a href="/ombor" class="hover:text-cyan-600 transition flex items-center space-x-1">
+                <i class="fa-solid fa-boxes-stacked text-[11px]"></i>
+                <span>Omborxona</span>
+            </a>
+            <span class="text-slate-300">/</span>
+            <span class="text-slate-800 font-bold">Kafelni tahrirlash</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+            <a href="/ombor/qr/{{ product.id }}" class="inline-flex items-center space-x-1 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xs transition">
+                <i class="fa-solid fa-qrcode text-[10px]"></i>
+                <span>QR Kod</span>
+            </a>
+            <a href="/ombor" class="inline-flex items-center space-x-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-xs hover:bg-slate-50 transition">
+                <i class="fa-solid fa-arrow-left text-[9px]"></i>
+                <span>Orqaga</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs space-y-3">
+        <div class="border-b border-slate-100 pb-2 flex items-center justify-between gap-2">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-black text-slate-900 tracking-tight">
+                        {{ product.brand }} — {{ product.model_name }}
+                    </h1>
+                    <p class="text-[11px] text-slate-500">
+                        SKU: <span class="font-mono font-bold text-slate-700">{{ product.sku }}</span> &bull; Zaxira: <span class="font-bold text-emerald-600">{{ product.quantity_in_stock }} {{ product.unit }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" action="/ombor/tahrirlash/{{ product.id }}" enctype="multipart/form-data" class="space-y-3">
+            
+            <!-- Kirim qo'shish bloki (Ixcham) -->
+            <div class="p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div class="flex items-center space-x-2">
+                    <div class="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-boxes-packing text-[10px]"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-emerald-900 text-xs">Yangi Kirim Qo'shish (Zaxirani oshirish)</h3>
+                        <p class="text-[10px] text-emerald-700">Yangi partiya kelgan bo'lsa, miqdorni kiriting (avtomatik qo'shiladi).</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-1.5 sm:w-48 flex-shrink-0">
+                    <div class="relative w-full">
+                        <input type="number" step="0.1" name="add_stock" value="0" min="0" class="w-full pl-2.5 pr-12 py-1 text-xs bg-white border border-emerald-300 rounded-md font-black text-emerald-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-2xs">
+                        <span class="absolute right-2 top-1 text-[10px] font-bold text-emerald-600">+ {{ product.unit }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- Zavod / Marka -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center justify-between">
+                        <span class="flex items-center space-x-1.5">
+                            <i class="fa-solid fa-industry text-cyan-600"></i>
+                            <span>Marka / Zavod Nomi <span class="text-rose-500">*</span></span>
+                        </span>
+                        <a href="/zavodlar" target="_blank" class="text-[11px] font-semibold text-cyan-600 hover:text-cyan-800 hover:underline flex items-center space-x-1">
+                            <i class="fa-solid fa-gear text-[10px]"></i>
+                            <span>Zavodlar</span>
+                        </a>
+                    </label>
+                    <div class="relative">
+                        <select name="brand" id="brandSelect" required class="w-full pl-9 pr-8 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium cursor-pointer appearance-none">
+                            {% for f in factories %}
+                            <option value="{{ f.name }}" {% if product.brand == f.name %}selected{% endif %}>
+                                {{ f.name }}{% if f.country %} ({{ f.country }}){% endif %}
+                            </option>
+                            {% endfor %}
+                            {% if product.brand and product.brand not in factories|map(attribute='name') %}
+                            <option value="{{ product.brand }}" selected>{{ product.brand }}</option>
+                            {% endif %}
+                        </select>
+                        <i class="fa-solid fa-building text-slate-400 text-xs absolute left-3 top-3 pointer-events-none"></i>
+                        <i class="fa-solid fa-chevron-down text-slate-400 text-[10px] absolute right-3 top-3.5 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <!-- Model Nomi -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Model / Kolleksiya Nomi <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="text" name="model_name" value="{{ product.model_name }}" required class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium">
+                        <i class="fa-solid fa-tag text-slate-400 text-xs absolute left-3 top-3 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <!-- O'lchami -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                            O'lchami (sm) <span class="text-rose-500">*</span>
+                        </label>
+                    </div>
+                    <div class="relative">
+                        <input type="text" name="size" id="sizeInput" value="{{ product.size }}" required class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium">
+                        <i class="fa-solid fa-ruler-combined text-slate-400 text-xs absolute left-3 top-3 pointer-events-none"></i>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mt-1.5">
+                        <button type="button" onclick="setSize('60x120 sm', 2, 1.44)" class="text-[10px] font-medium bg-slate-100 hover:bg-cyan-50 text-slate-600 hover:text-cyan-700 px-2 py-0.5 rounded border border-slate-200 transition">60x120</button>
+                        <button type="button" onclick="setSize('60x60 sm', 4, 1.44)" class="text-[10px] font-medium bg-slate-100 hover:bg-cyan-50 text-slate-600 hover:text-cyan-700 px-2 py-0.5 rounded border border-slate-200 transition">60x60</button>
+                        <button type="button" onclick="setSize('30x60 sm', 8, 1.44)" class="text-[10px] font-medium bg-slate-100 hover:bg-cyan-50 text-slate-600 hover:text-cyan-700 px-2 py-0.5 rounded border border-slate-200 transition">30x60</button>
+                        <button type="button" onclick="setSize('80x80 sm', 3, 1.92)" class="text-[10px] font-medium bg-slate-100 hover:bg-cyan-50 text-slate-600 hover:text-cyan-700 px-2 py-0.5 rounded border border-slate-200 transition">80x80</button>
+                    </div>
+                </div>
+
+                <!-- Birlik -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        O'lchov Birligi
+                    </label>
+                    <select name="unit" class="w-full px-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium">
+                        <option value="m²" {% if product.unit == 'm²' %}selected{% endif %}>m² (Kvadrat metr)</option>
+                        <option value="dona" {% if product.unit == 'dona' %}selected{% endif %}>dona (Donalab)</option>
+                        <option value="quti" {% if product.unit == 'quti' %}selected{% endif %}>quti (Qutilab)</option>
+                    </select>
+                </div>
+
+                <!-- 1 Quti maydoni -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        1 Quti Maydoni (m²)
+                    </label>
+                    <input type="number" step="0.01" name="box_size_m2" value="{{ product.box_size_m2 }}" class="w-full px-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium">
+                </div>
+
+                <!-- 1 Qutidagi dona -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        1 Qutidagi Dona Soni
+                    </label>
+                    <input type="number" name="pieces_per_box" value="{{ product.pieces_per_box }}" class="w-full px-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium">
+                </div>
+
+                <!-- Sotish Narxi -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Sotish Narxi (1 m² uchun) <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="number" step="100" name="price" value="{{ product.price }}" required class="w-full pl-3 pr-14 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-black text-slate-900">
+                        <span class="absolute right-3 top-2 text-xs font-bold text-slate-400">so'm</span>
+                    </div>
+                </div>
+
+                <!-- Kirim Narxi -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Kirim (Tan) Narxi
+                    </label>
+                    <div class="relative">
+                        <input type="number" step="100" name="cost_price" value="{{ product.cost_price }}" class="w-full pl-3 pr-14 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium text-slate-700">
+                        <span class="absolute right-3 top-2 text-xs font-medium text-slate-400">so'm</span>
+                    </div>
+                </div>
+
+                <!-- Minimal Qoldiq -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Minimal Qoldiq (Ogohlantirish)
+                    </label>
+                    <input type="number" step="0.1" name="min_quantity" value="{{ product.min_quantity }}" class="w-full px-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium">
+                </div>
+
+                <!-- Ombor Tokchasi -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Ombor Tokchasi / Joylashuvi
+                    </label>
+                    <div class="relative">
+                        <input type="text" name="location_rack" value="{{ product.location_rack or '' }}" placeholder="Masalan: A-Qator, 2-Tokcha" class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition font-medium">
+                        <i class="fa-solid fa-map-pin text-slate-400 text-xs absolute left-3 top-3 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <!-- Kafel Rasmi (To'liq proporsiyada) -->
+                <div class="md:col-span-2 pt-1">
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center justify-between">
+                        <span class="flex items-center space-x-1.5">
+                            <i class="fa-solid fa-image text-cyan-600"></i>
+                            <span>Kafel Rasmi (Tasvir)</span>
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-normal">To'liq proporsiyada ko'rinadi</span>
+                    </label>
+                    <div class="p-3 bg-slate-50/80 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+                        <div class="w-full sm:w-48 h-40 rounded-xl border border-slate-200 overflow-hidden bg-slate-900/5 flex-shrink-0 shadow-inner flex items-center justify-center p-1.5 relative group">
+                            {% if product.image_path %}
+                            <img id="imagePreview" src="{{ product.image_path }}" class="max-h-full max-w-full object-contain rounded-lg cursor-pointer hover:opacity-95 transition" onclick="openImageModal(this.src)" title="To'liq ekranda ko'rish uchun bosing">
+                            <button type="button" onclick="openImageModal(document.getElementById('imagePreview').src)" class="absolute top-2 right-2 bg-slate-900/75 hover:bg-slate-900 text-white w-7 h-7 rounded-lg flex items-center justify-center transition shadow text-xs" title="To'liq ekranda ko'rish">
+                                <i class="fa-solid fa-expand"></i>
+                            </button>
+                            {% else %}
+                            <img id="imagePreview" class="hidden max-h-full max-w-full object-contain rounded-lg cursor-pointer hover:opacity-95 transition" onclick="openImageModal(this.src)" title="To'liq ekranda ko'rish uchun bosing">
+                            <div id="imagePlaceholderIcon" class="flex flex-col items-center justify-center text-slate-300 text-xs">
+                                <i class="fa-solid fa-camera text-3xl mb-1"></i>
+                                <span>Rasm yuklanmagan</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <label class="cursor-pointer bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs py-2 px-3.5 rounded-lg transition border border-slate-200 inline-flex items-center space-x-2 shadow-sm">
+                                    <i class="fa-solid fa-cloud-arrow-up text-cyan-600"></i>
+                                    <span>Yangi Rasm Yuklash / Almashtirish</span>
+                                    <input type="file" name="image" id="imageInput" accept="image/*" class="hidden" onchange="previewImage(this)">
+                                </label>
+                                {% if product.image_path %}
+                                <button type="button" onclick="openImageModal('{{ product.image_path }}')" class="bg-cyan-50 hover:bg-cyan-100 text-cyan-700 font-bold text-xs py-2 px-3 rounded-lg transition border border-cyan-200 inline-flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-expand"></i>
+                                    <span>To'liq ko'rish</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <span class="text-[11px] text-slate-400 block">Kafel namunasi to'liq hajmda va qirqilmasdan saqlanadi. Rasmni ustiga bossangiz to'liq ekranda kattalashib ochiladi.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Izoh -->
+                <div class="md:col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Izoh
+                    </label>
+                    <textarea name="description" rows="2" class="w-full px-3 py-2 text-xs bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-white transition resize-none">{{ product.description or '' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Saqlash Tugmalari -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
+                <a href="/ombor" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition">
+                    Bekor qilish
+                </a>
+                <button type="submit" class="inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition text-xs">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>O'zgarishlarni Saqlash</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- To'liq Tasvirni Ko'rish Modali (Lightbox Modal) -->
+    <div id="imageModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4" onclick="closeImageModal()">
+        <div class="relative max-w-4xl max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl p-3 border border-slate-700 flex flex-col items-center" onclick="event.stopPropagation()">
+            <div class="w-full flex items-center justify-between pb-2 px-2 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-image text-cyan-600"></i>
+                    <span>{{ product.brand }} {{ product.model_name }} — To'liq Tasviri</span>
+                </span>
+                <button type="button" onclick="closeImageModal()" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <div class="p-2 flex items-center justify-center max-h-[78vh] overflow-auto">
+                <img id="modalImage" src="" class="max-h-[75vh] max-w-full object-contain rounded-lg shadow-sm">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewImage(input) {
+    const preview = document.getElementById('imagePreview');
+    const icon = document.getElementById('imagePlaceholderIcon');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            if (icon) icon.classList.add('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function openImageModal(src) {
+    if (!src) return;
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    if (modal && modalImg) {
+        modalImg.src = src;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeImageModal();
+    }
+});
+
+function setSize(sz, pcs, boxM2) {
+    document.getElementById('sizeInput').value = sz;
+    const pcsInput = document.querySelector('input[name="pieces_per_box"]');
+    const boxInput = document.querySelector('input[name="box_size_m2"]');
+    if (pcsInput) pcsInput.value = pcs;
+    if (boxInput) boxInput.value = boxM2;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,725 @@
+{% extends "base.html" %}
+
+{% block title %}Siniqlar & Brak Kafellar Bo'limi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-rose-600 mb-1">
+                <i class="fa-solid fa-heart-crack"></i>
+                <span>Ombor Nazorati & Sifat Nazorati</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
+                <i class="fa-solid fa-burst text-rose-500"></i>
+                <span>Siniqlar & Brak Kafellar Bo'limi</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Yuk tushirishda yuklovchilar tomonidan sindirilgan yoki quti ichidan chiqqan defekt kafellarning aniq hisobi va zararlar auditi
+            </p>
+        </div>
+        <div class="flex items-center space-x-2.5">
+            <a href="/ombor" class="inline-flex items-center space-x-2 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm transition">
+                <i class="fa-solid fa-boxes-stacked text-indigo-500"></i>
+                <span>Asosiy Ombor Qoldig'i</span>
+            </a>
+            <button type="button" onclick="openDirectDefectModal()" class="inline-flex items-center space-x-2 bg-rose-600 hover:bg-rose-500 text-white font-black px-4 py-2.5 rounded-2xl shadow-md shadow-rose-600/20 transition text-xs sm:text-sm">
+                <i class="fa-solid fa-plus-circle text-base"></i>
+                <span>+ Siniq Kafel Qayd Etish</span>
+            </button>
+        </div>
+    </div>
+
+
+    <!-- KPI Summary Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Card 1: Jami Singan/Brak Hajmi -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Jami Siniq Kafellar</span>
+                <span class="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block font-mono">
+                    {{ "%.2f"|format(kpi.total_broken_qty or 0) }} <span class="text-xs font-bold text-slate-400">m² / dona</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">Ro'yxatga olingan barcha braklar</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-2xl border border-rose-200/60 shadow-xs">
+                <i class="fa-solid fa-heart-crack"></i>
+            </div>
+        </div>
+
+        <!-- Card 2: Umumiy Moddiy Zarar -->
+        <div class="bg-gradient-to-br from-rose-50 to-orange-50/60 rounded-3xl p-5 border border-rose-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-black uppercase tracking-wider text-rose-600 block flex items-center space-x-1.5">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block"></span>
+                    <span>Umumiy Moddiy Zarar</span>
+                </span>
+                <span class="text-2xl sm:text-3xl font-black text-rose-700 mt-1 block font-mono">
+                    {{ "{:,.0f}".format(kpi.total_loss_sum or 0).replace(',', ' ') }} <span class="text-xs font-bold text-rose-500">so'm</span>
+                </span>
+                <span class="text-[11px] text-rose-600/80 mt-0.5 block font-medium">Do'kon xarajatlariga o'tkazilgan</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-2xl shadow-md shadow-rose-500/30">
+                <i class="fa-solid fa-file-circle-xmark"></i>
+            </div>
+        </div>
+
+        <!-- Card 3: Siniqlar Burchagidagi Qoldiq -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Siniqlar Qoldig'i</span>
+                <span class="text-2xl sm:text-3xl font-black text-amber-600 mt-1 block font-mono">
+                    {{ "%.2f"|format(kpi.current_broken_qty or 0) }} <span class="text-xs font-bold text-slate-400">m² / dona</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">Hali omborda saqlanayotganlar</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl border border-amber-200/60 shadow-xs">
+                <i class="fa-solid fa-boxes-packing"></i>
+            </div>
+        </div>
+
+        <!-- Card 4: Hal Qilingan / Chiqarilganlar -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Hal Qilingan Braklar</span>
+                <span class="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block font-mono">
+                    {{ kpi.resolved_count or 0 }} <span class="text-xs font-bold text-slate-400">ta holat</span>
+                </span>
+                <span class="text-[11px] text-slate-500 mt-0.5 block">Sotilgan yoki hisobdan chiqarilgan</span>
+            </div>
+            <div class="w-13 h-13 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl border border-emerald-200/60 shadow-xs">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm">
+        <form method="GET" action="/ombor/siniqlar" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+            <!-- Search input -->
+            <div class="sm:col-span-5 relative">
+                <input type="text" name="q" value="{{ q }}" placeholder="Kafel markasi, mas'ul yuklovchi yoki izoh..." class="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-rose-500 focus:bg-white font-medium transition">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="sm:col-span-3">
+                <select name="status" class="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-rose-500 font-medium">
+                    <option value="" {% if not status_filter %}selected{% endif %}>Barcha holatlar</option>
+                    <option value="omborda" {% if status_filter == 'omborda' %}selected{% endif %}>📦 Omborda (Siniqlar burchagi)</option>
+                    <option value="arzonlashtirib_sotildi" {% if status_filter == 'arzonlashtirib_sotildi' %}selected{% endif %}>🏷️ Arzonlashtirib sotildi</option>
+                    <option value="hisobdan_chiqarildi" {% if status_filter == 'hisobdan_chiqarildi' %}selected{% endif %}>🗑️ Hisobdan chiqarildi (Utilizatsiya)</option>
+                    <option value="zavodga_qaytarildi" {% if status_filter == 'zavodga_qaytarildi' %}selected{% endif %}>🏭 Zavodga reklamatsiya</option>
+                </select>
+            </div>
+
+            <!-- Reason Filter -->
+            <div class="sm:col-span-2">
+                <select name="reason" class="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-rose-500 font-medium">
+                    <option value="" {% if not reason_filter %}selected{% endif %}>Barcha sabablar</option>
+                    <option value="Yuk tushirishda" {% if 'Yuk tushirishda' in reason_filter %}selected{% endif %}>Yuklovchilar sindirdi</option>
+                    <option value="Pachka" {% if 'Pachka' in reason_filter %}selected{% endif %}>Pachka ichidan defekt</option>
+                    <option value="Omborda" {% if 'Omborda' in reason_filter %}selected{% endif %}>Omborda sindi</option>
+                </select>
+            </div>
+
+            <!-- Submit Button & Reset -->
+            <div class="sm:col-span-2 flex items-center space-x-2">
+                <button type="submit" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition shadow-sm">
+                    Filtr
+                </button>
+                <a href="/ombor/siniqlar" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 px-3 rounded-xl transition text-center" title="Qayta tiklash">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Broken Tiles Table -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="font-bold text-slate-900 text-base flex items-center space-x-2">
+                <i class="fa-solid fa-burst text-rose-500"></i>
+                <span>Siniqlar va Brak Kafellar Jurnali ({{ defects|length }} ta qayd)</span>
+            </h2>
+            <span class="text-xs text-slate-400 font-medium">Asosiy ombordan ajratilgan partiyalar</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                    <tr>
+                        <th class="py-3 px-4">#</th>
+                        <th class="py-3 px-4">Kafel Markasi & Modeli</th>
+                        <th class="py-3 px-4 text-center">O'lchami</th>
+                        <th class="py-3 px-4 text-center">Singan Miqdor</th>
+                        <th class="py-3 px-4 text-right">Zarar Qiymati</th>
+                        <th class="py-3 px-4 text-center">Siniq Sotuv Narxi</th>
+                        <th class="py-3 px-4">Sababi & Mas'ul Shaxs</th>
+                        <th class="py-3 px-4 text-center">Holati</th>
+                        <th class="py-3 px-4">Qayd Etgan</th>
+                        <th class="py-3 px-4 text-center">Amallar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if defects %}
+                        {% for d in defects %}
+                        <tr class="hover:bg-rose-50/30 transition">
+                            <td class="py-3.5 px-4 font-mono text-slate-400 text-xs">#{{ d.id }}</td>
+                            <td class="py-3.5 px-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 flex-shrink-0">
+                                        <img src="{{ d.image_path or '/static/placeholder-tile.png' }}" class="w-full h-full object-cover">
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-black uppercase text-sky-600 block">{{ d.brand }}</span>
+                                        <span class="font-bold text-slate-900 block text-xs sm:text-sm leading-tight">{{ d.model_name }}</span>
+                                        <span class="text-[10px] text-slate-400 font-mono">{{ d.sku }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3.5 px-4 text-center font-bold text-slate-700 text-xs">
+                                {{ d.size }}
+                            </td>
+                            <td class="py-3.5 px-4 text-center font-mono">
+                                <span class="text-sm font-black text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200/80">
+                                    {{ "%.2f"|format(d.quantity) }} {{ d.unit }}
+                                </span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-mono font-black text-rose-700 text-xs">
+                                {{ "{:,.0f}".format(d.loss_amount).replace(',', ' ') }} s.
+                            </td>
+                            <td class="py-3.5 px-4 text-center">
+                                <div class="flex flex-col items-center justify-center space-y-1">
+                                    {% if d.discounted_price and d.discounted_price > 0 %}
+                                    <span class="font-mono font-black text-emerald-600 text-xs sm:text-sm">
+                                        {{ "{:,.0f}".format(d.discounted_price).replace(',', ' ') }} so'm
+                                    </span>
+                                    <span class="text-[9px] text-slate-400">1 {{ d.unit }} uchun</span>
+                                    {% else %}
+                                    <span class="text-[10px] font-bold text-slate-400 italic">Belgilanmagan</span>
+                                    {% endif %}
+                                    {% if d.status == 'omborda' %}
+                                    <button type="button" onclick="openSetPriceModal({{ d.id }}, '{{ d.brand|escape }} {{ d.model_name|escape }}', {{ d.price or 0 }}, {{ d.discounted_price or 0 }}, '{{ d.unit }}')" class="inline-flex items-center space-x-1 text-[10px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-lg border border-sky-200 transition">
+                                        <i class="fa-solid fa-tag text-[10px] text-sky-500"></i>
+                                        <span>Narx qo'yish</span>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="py-3.5 px-4 text-xs">
+                                <span class="font-bold text-slate-800 block">{{ d.reason }}</span>
+                                <span class="text-[10px] text-slate-500">
+                                    <i class="fa-solid fa-user text-slate-400 mr-1"></i>Mas'ul: <b>{{ d.responsible_person or "Noma'lum" }}</b>
+                                </span>
+                                {% if d.note %}
+                                <p class="text-[10px] text-slate-400 italic mt-0.5 max-w-xs truncate" title="{{ d.note }}">{{ d.note }}</p>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-4 text-center">
+                                {% if d.status == 'omborda' %}
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                                        <i class="fa-solid fa-box-open mr-1 text-emerald-500"></i> Omborda (Sotuvga tayyor)
+                                    </span>
+                                {% elif d.status == 'arzonlashtirib_sotildi' %}
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+                                        <i class="fa-solid fa-circle-check mr-1 text-blue-500"></i> Sotildi
+                                    </span>
+                                    {% if d.sold_price and d.sold_price > 0 %}
+                                    <span class="block text-[9px] font-bold text-slate-500 font-mono mt-0.5">
+                                        Tushum: +{{ "{:,.0f}".format(d.sold_price).replace(',', ' ') }} s.
+                                    </span>
+                                    {% endif %}
+                                {% elif d.status == 'hisobdan_chiqarildi' %}
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs">
+                                        <i class="fa-solid fa-trash-can mr-1 text-slate-400"></i> Utilizatsiya
+                                    </span>
+                                {% elif d.status == 'zavodga_qaytarildi' %}
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                                        <i class="fa-solid fa-industry mr-1 text-purple-500"></i> Reklamatsiya
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-4 text-xs text-slate-500">
+                                <span class="block font-medium text-slate-700">{{ d.created_by or 'Omborchi' }}</span>
+                                <span class="text-[10px] text-slate-400 font-mono">{{ d.created_at[:16] }}</span>
+                            </td>
+                            <td class="py-3.5 px-4 text-center">
+                                {% if d.status == 'omborda' %}
+                                <div class="flex items-center justify-center space-x-1">
+                                    <a href="/sotuv?defect_id={{ d.id }}" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-xl transition shadow-xs inline-flex items-center space-x-1" title="Showroom savatiga qo'shish">
+                                        <i class="fa-solid fa-cart-shopping"></i>
+                                        <span>Sotish</span>
+                                    </a>
+                                    <button onclick="openDefectActionModal({{ d.id }}, '{{ d.brand|escape }} {{ d.model_name|escape }}', {{ d.quantity }}, '{{ d.unit }}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] px-2.5 py-1.5 rounded-xl transition" title="Boshqa tasarruf amali">
+                                        <span>Amal</span>
+                                    </button>
+                                </div>
+                                {% else %}
+                                <div class="flex flex-col items-center">
+                                    <span class="text-[11px] text-slate-400 font-medium italic">Hal qilingan</span>
+                                    <button type="button" onclick="resetDefectToOmborda({{ d.id }})" class="text-[10px] text-slate-500 hover:text-rose-600 underline font-semibold mt-0.5" title="Siniq holatini yana 'Omborda (Sotuvda)' ga qaytarish">
+                                        <i class="fa-solid fa-rotate-left mr-0.5"></i> Qaytarish
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center py-12 text-slate-400">
+                                <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-300"></i>
+                                <p class="text-sm font-bold">Siniqlar va brak yozuvlari topilmadi</p>
+                                <p class="text-xs text-slate-400 mt-1">Ombordagi kafellarda brak aniqlanganda ombor sahifasidagi "Siniq / Brak" tugmasi orqali o'tkaziladi</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Siniq Kafelni Tasarruf Etish -->
+<div id="defectActionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-list-check"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-base leading-tight">Siniq Kafelni Tasarruf Etish</h3>
+                    <p class="text-xs text-slate-400" id="actionModalSubtitle">Kafel</p>
+                </div>
+            </div>
+            <button onclick="closeDefectActionModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="space-y-4 text-xs">
+            <input type="hidden" id="actionDefectId">
+
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Amal Turini Tanlang *</label>
+                <div class="grid grid-cols-1 gap-2">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="defectActionType" value="arzonlashtirib_sotildi" checked onchange="toggleActionFields('arzonlashtirib_sotildi')" class="peer hidden">
+                        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-800 transition">
+                            <span class="font-black block text-xs">🏷️ Arzonlashtirib (skidka bilan) sotish</span>
+                            <span class="text-[10px] text-slate-500 block">Qirqim va chekka joylarga ishlatish uchun chegirmada sotish</span>
+                        </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                        <input type="radio" name="defectActionType" value="hisobdan_chiqarildi" onchange="toggleActionFields('hisobdan_chiqarildi')" class="peer hidden">
+                        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 peer-checked:border-slate-600 peer-checked:bg-slate-100 peer-checked:text-slate-900 transition">
+                            <span class="font-black block text-xs">🗑️ Hisobdan chiqarish (Utilizatsiya)</span>
+                            <span class="text-[10px] text-slate-500 block">Yaroqsiz singan mayda parchalarni butunlay tashlab yuborish</span>
+                        </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                        <input type="radio" name="defectActionType" value="zavodga_qaytarildi" onchange="toggleActionFields('zavodga_qaytarildi')" class="peer hidden">
+                        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-800 transition">
+                            <span class="font-black block text-xs">🏭 Zavodga reklamatsiya (Qaytarish)</span>
+                            <span class="text-[10px] text-slate-500 block">Quti ichidan chiqqan defekt uchun ishlab chiqaruvchiga da'vo</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Sale price input if arzonlashtirib sotildi -->
+            <div id="salePriceBlock">
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Sotilgan Narxi (so'm):</label>
+                <input type="number" id="actionSalePrice" value="0" step="1000" min="0" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-black text-sm focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Izoh / Tafsilot</label>
+                <input type="text" id="actionNote" placeholder="Masalan: 'Usta Sardorga 50% chegirma bilan sotildi'..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-slate-900">
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closeDefectActionModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Bekor qilish</button>
+                <button type="button" onclick="submitDefectAction()" id="submitActionBtn" class="bg-slate-900 hover:bg-slate-800 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md transition">Tasdiqlash</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: To'g'ridan-to'g'ri Siniq Kafel Qayd Etish -->
+<div id="directDefectModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-heart-crack"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-base leading-tight">Siniq / Brak Kafel Qayd Etish</h3>
+                    <p class="text-xs text-slate-400">Ombordan siniqlar bo'limiga o'tkazish</p>
+                </div>
+            </div>
+            <button onclick="closeDirectDefectModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="space-y-3.5 text-xs">
+            <!-- Product selection -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Kafelni Tanlang *</label>
+                <select id="directProductId" onchange="onDirectProductChange()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-rose-500 focus:bg-white text-slate-800">
+                    {% for p in products_list %}
+                    <option value="{{ p.id }}" data-unit="{{ p.unit }}" data-stock="{{ p.quantity_in_stock }}">
+                        {{ p.brand }} {{ p.model_name }} ({{ p.size }}) — Omborda: {{ p.quantity_in_stock }} {{ p.unit }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Current Stock banner -->
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center">
+                <span class="text-[11px] font-bold uppercase text-slate-500">Mavjud Ombor Qoldig'i:</span>
+                <span id="directCurrentStock" class="text-base font-black text-emerald-600 font-mono">0 m²</span>
+            </div>
+
+            <!-- Quantity input -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Singan / Defekt Miqdor *</label>
+                <div class="flex items-center space-x-2">
+                    <input type="number" id="directQuantityInput" value="1" step="0.1" min="0.1" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-black text-base focus:outline-none focus:border-rose-500 focus:bg-white text-slate-900">
+                    <span id="directUnitLabel" class="font-bold text-slate-500 text-sm">m²</span>
+                </div>
+            </div>
+
+            <!-- Reason dropdown -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Singanlik Sababi *</label>
+                <select id="directReasonSelect" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-rose-500 focus:bg-white text-slate-800">
+                    <option value="Yuk tushirishda sindi (yuklovchilar)">🚛 Yuk tushirishda sindi (yuklovchilar tomonidan)</option>
+                    <option value="Pachka ichidan defekt chiqdi (zavod braki)">📦 Pachka ichidan defekt chiqdi (zavod braki)</option>
+                    <option value="Ombor ichida tashish paytida sindi">🏢 Ombor ichida tashish paytida sinib qoldi</option>
+                    <option value="Mijoz qaytargan (singan)">↩️ Mijoz qaytargan (singan/zararlangan)</option>
+                    <option value="Boshqa sabab">⚠️ Boshqa sabab</option>
+                </select>
+            </div>
+
+            <!-- Responsible person -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Kim Tomonidan Sindirildi? (Mas'ul Shaxs)</label>
+                <input type="text" id="directResponsibleInput" placeholder="Masalan: 'Yuklovchi Akmal', 'Haydovchi', 'Kompaniya hisobidan'..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-rose-500 focus:bg-white text-slate-900">
+            </div>
+
+            <!-- Discounted sale price input -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Siniq Kafel Sotuv Narxi (1 birlik uchun, so'm)</label>
+                <input type="number" id="directDiscountedPriceInput" step="1000" min="0" placeholder="Bo'sh qolsa asl narxning 50% belgilanadi" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold focus:outline-none focus:border-rose-500 focus:bg-white text-slate-900">
+            </div>
+
+            <!-- Note -->
+            <div>
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Qo'shimcha Izoh</label>
+                <textarea id="directNoteInput" rows="2" placeholder="Kafel burchagi uchgan, yorilgan yoki butunlay singan..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-rose-500 focus:bg-white text-slate-900"></textarea>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-rose-50 text-[11px] text-rose-700 leading-tight border border-rose-200">
+                * Tasdiqlangach, ushbu miqdor asosiy ombor qoldig'idan <b>avtomatik ayiriladi</b> va Siniqlar Bo'limiga o'tkaziladi.
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closeDirectDefectModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Bekor qilish</button>
+                <button type="button" onclick="submitDirectDefect()" id="submitDirectBtn" class="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-burst"></i>
+                    <span>Siniqlar Bo'limiga O'tkazish</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let directActiveStock = 0;
+    function openDirectDefectModal() {
+        onDirectProductChange();
+        document.getElementById("directQuantityInput").value = "1";
+        document.getElementById("directResponsibleInput").value = "";
+        document.getElementById("directNoteInput").value = "";
+        document.getElementById("directDefectModal").classList.remove("hidden");
+    }
+
+    function closeDirectDefectModal() {
+        document.getElementById("directDefectModal").classList.add("hidden");
+    }
+
+    function onDirectProductChange() {
+        const sel = document.getElementById("directProductId");
+        if (!sel || !sel.options[sel.selectedIndex]) return;
+        const opt = sel.options[sel.selectedIndex];
+        const unit = opt.getAttribute("data-unit") || "m²";
+        const stock = parseFloat(opt.getAttribute("data-stock") || 0);
+        directActiveStock = stock;
+        document.getElementById("directCurrentStock").innerText = `${stock} ${unit}`;
+        document.getElementById("directUnitLabel").innerText = unit;
+    }
+
+    async function submitDirectDefect() {
+        const sel = document.getElementById("directProductId");
+        if (!sel) return;
+        const productId = sel.value;
+        const quantity = parseFloat(document.getElementById("directQuantityInput").value) || 0;
+        const reason = document.getElementById("directReasonSelect").value;
+        const responsible = document.getElementById("directResponsibleInput").value.trim();
+        const discountedPrice = parseFloat(document.getElementById("directDiscountedPriceInput").value) || 0;
+        const note = document.getElementById("directNoteInput").value.trim();
+        const btn = document.getElementById("submitDirectBtn");
+
+        if (quantity <= 0) {
+            alert("Singan miqdor 0 dan katta bo'lishi kerak!");
+            return;
+        }
+        if (quantity > directActiveStock) {
+            alert(`Omborda faqat ${directActiveStock} mavjud. Undan ko'pini brak qilib bo'lmaydi!`);
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>O'tkazilmoqda...</span>`;
+
+        try {
+            const resp = await fetch(`/api/product/${productId}/report-defect`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    quantity: quantity,
+                    reason: reason,
+                    responsible_person: responsible,
+                    discounted_price: discountedPrice,
+                    note: note
+                })
+            });
+            const res = await resp.json();
+            if (res.success) {
+                closeDirectDefectModal();
+                if (typeof showToast === 'function') {
+                    showToast(res.message, "success");
+                } else {
+                    alert(res.message);
+                }
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                alert(res.message || "Xatolik yuz berdi!");
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-burst"></i> <span>Siniqlar Bo'limiga O'tkazish</span>`;
+            }
+        } catch (e) {
+            alert("Aloqa xatosi!");
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-burst"></i> <span>Siniqlar Bo'limiga O'tkazish</span>`;
+        }
+    }
+
+    function openDefectActionModal(id, title, qty, unit) {
+        document.getElementById("actionDefectId").value = id;
+        document.getElementById("actionModalSubtitle").innerText = `${title} (${qty} ${unit})`;
+        document.getElementById("actionSalePrice").value = "0";
+        document.getElementById("actionNote").value = "";
+        document.getElementById("defectActionModal").classList.remove("hidden");
+    }
+
+    function closeDefectActionModal() {
+        document.getElementById("defectActionModal").classList.add("hidden");
+    }
+
+    function toggleActionFields(actionType) {
+        const saleBlock = document.getElementById("salePriceBlock");
+        if (actionType === "arzonlashtirib_sotildi") {
+            saleBlock.classList.remove("hidden");
+        } else {
+            saleBlock.classList.add("hidden");
+        }
+    }
+
+    async function submitDefectAction() {
+        const id = document.getElementById("actionDefectId").value;
+        const actionTypeEl = document.querySelector('input[name="defectActionType"]:checked');
+        const actionType = actionTypeEl ? actionTypeEl.value : 'hisobdan_chiqarildi';
+        const salePrice = parseFloat(document.getElementById("actionSalePrice").value) || 0;
+        const note = document.getElementById("actionNote").value;
+        const btn = document.getElementById("submitActionBtn");
+
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saqlanmoqda...</span>`;
+
+        try {
+            const resp = await fetch(`/api/defect/${id}/action`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action_type: actionType, sale_price: salePrice, note: note })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                closeDefectActionModal();
+                if (typeof showToast === 'function') {
+                    showToast(data.message, "success");
+                }
+                if (data.order_id) {
+                    setTimeout(() => {
+                        window.location.href = `/nakladnoy/${data.order_id}`;
+                    }, 600);
+                } else {
+                    setTimeout(() => window.location.reload(), 600);
+                }
+            } else {
+                alert(data.message || "Xatolik yuz berdi!");
+                btn.disabled = false;
+                btn.innerText = "Tasdiqlash";
+            }
+        } catch (e) {
+            alert("Aloqa xatosi!");
+            btn.disabled = false;
+            btn.innerText = "Tasdiqlash";
+        }
+    }
+
+    let currentSetPriceOrig = 0;
+    function openSetPriceModal(id, title, origPrice, currentPrice, unit) {
+        document.getElementById("setPriceDefectId").value = id;
+        document.getElementById("setPriceModalSubtitle").innerText = `${title} (${unit})`;
+        currentSetPriceOrig = origPrice > 0 ? origPrice : 100000;
+        document.getElementById("setPriceOriginal").value = currentSetPriceOrig;
+        document.getElementById("setPriceOriginalDisplay").innerText = (currentSetPriceOrig).toLocaleString() + " so'm";
+        document.getElementById("setPriceHalfDisplay").innerText = (Math.round(currentSetPriceOrig * 0.5)).toLocaleString() + " so'm";
+        document.getElementById("setPriceInput").value = currentPrice > 0 ? currentPrice : Math.round(currentSetPriceOrig * 0.5);
+        document.getElementById("setPriceModal").classList.remove("hidden");
+    }
+
+    function closeSetPriceModal() {
+        document.getElementById("setPriceModal").classList.add("hidden");
+    }
+
+    function setDiscountPreset(ratio) {
+        const discounted = Math.round(currentSetPriceOrig * (1 - ratio));
+        document.getElementById("setPriceInput").value = Math.max(0, discounted);
+    }
+
+    async function submitSetPrice() {
+        const id = document.getElementById("setPriceDefectId").value;
+        const price = parseFloat(document.getElementById("setPriceInput").value) || 0;
+        const btn = document.getElementById("savePriceBtn");
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saqlanmoqda...</span>`;
+
+        try {
+            const resp = await fetch(`/api/defect/${id}/set-price`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ discounted_price: price })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                closeSetPriceModal();
+                if (typeof showToast === 'function') {
+                    showToast(data.message, "success");
+                } else {
+                    alert(data.message);
+                }
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                alert(data.message || "Xatolik yuz berdi!");
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Narxni Saqlash</span>`;
+            }
+        } catch (e) {
+            alert("Aloqa xatosi!");
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Narxni Saqlash</span>`;
+        }
+    }
+
+    async function resetDefectToOmborda(id) {
+        if (!confirm("Ushbu kafel holatini qaytadan 'Omborda (Sotuvga tayyor)' ga o'tkazilsinmi?")) return;
+        try {
+            const resp = await fetch(`/api/defect/${id}/action`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action_type: "omborda", note: "Admin tomonidan 'Omborda' holatiga qaytarildi" })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                if (typeof showToast === 'function') showToast("Kafel yana omborda sotuvga tayyor holatga qaytarildi!", "success");
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                alert(data.message || "Xatolik!");
+            }
+        } catch (e) {
+            alert("Aloqa xatosi!");
+        }
+    }
+</script>
+
+<!-- MODAL: Siniq Kafel Sotuv Narxini Belgilash -->
+<div id="setPriceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-tag"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-sm sm:text-base leading-tight">Siniq Kafel Sotuv Narxi</h3>
+                    <p class="text-[11px] text-slate-400" id="setPriceModalSubtitle">Kafel nomi</p>
+                </div>
+            </div>
+            <button onclick="closeSetPriceModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="space-y-3.5 text-xs">
+            <input type="hidden" id="setPriceDefectId">
+            <input type="hidden" id="setPriceOriginal">
+
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Asl Sotuv Narxi:</span>
+                    <span id="setPriceOriginalDisplay" class="font-black text-sm text-slate-800 font-mono">100 000 so'm</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] uppercase font-bold text-amber-600 block">Tavsiya narx (-50%):</span>
+                    <span id="setPriceHalfDisplay" class="font-black text-sm text-amber-600 font-mono">50 000 so'm</span>
+                </div>
+            </div>
+
+            <!-- Quick Discount Presets -->
+            <div>
+                <label class="block font-bold text-slate-500 uppercase text-[10px] mb-1.5">Tezkor Chegirma Foizlari:</label>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button type="button" onclick="setDiscountPreset(0.3)" class="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition text-center">-30%</button>
+                    <button type="button" onclick="setDiscountPreset(0.5)" class="py-1.5 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-black text-xs transition border border-amber-200 text-center">-50%</button>
+                    <button type="button" onclick="setDiscountPreset(0.7)" class="py-1.5 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-black text-xs transition border border-rose-200 text-center">-70%</button>
+                    <button type="button" onclick="setDiscountPreset(0.85)" class="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition text-center">-85%</button>
+                </div>
+            </div>
+
+            <!-- Discounted Price Input -->
+            <div>
+                <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Sotuvchilarga Qo'yiladigan Narx (1 birlik uchun) *</label>
+                <div class="relative">
+                    <input type="number" id="setPriceInput" step="1000" min="0" placeholder="Masalan: 35000" class="w-full pl-3.5 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-black text-base focus:outline-none focus:border-emerald-500 focus:bg-white text-slate-900">
+                    <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">so'm</span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Sotuvchilar xaridorlarga ushbu narxda sota oladilar.</p>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closeSetPriceModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Bekor qilish</button>
+                <button type="button" onclick="submitSetPrice()" id="savePriceBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Narxni Saqlash</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
