@@ -921,12 +921,15 @@ def nakladnoy_chek(order_id):
 @login_required
 def api_product_by_code(code):
     """QR skaner orqali o'qilgan kod bo'yicha mahsulotni topish"""
-    code = code.strip()
+    code = (code or "").strip()
+    if "/" in code:
+        code = code.rstrip("/").split("/")[-1].strip()
+
     conn = database.get_db()
     cursor = conn.cursor()
     
     # SKU yoki ID bo'yicha qidirish
-    cursor.execute("SELECT * FROM products WHERE sku = ? OR id = ?", (code, code if code.isdigit() else -1))
+    cursor.execute("SELECT * FROM products WHERE sku = ? OR id = ?", (code, int(code) if code.isdigit() else -1))
     product = cursor.fetchone()
     conn.close()
     

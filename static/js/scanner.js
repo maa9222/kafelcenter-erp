@@ -1,6 +1,8 @@
-// QR Scanner and Product Lookup
+// QR Scanner and Product Lookup with Universal Multi-Device Support
 let html5QrCode = null;
 let isScannerRunning = false;
+let availableCameras = [];
+let currentCameraId = null;
 let currentScannedProduct = null;
 
 // Safe Toast notification caller
@@ -31,6 +33,119 @@ function playScanSound() {
     }
 }
 
+// Populate Camera Selector Dropdown
+function updateCameraSelectDropdown(cameras) {
+    const select = document.getElementById("cameraSelect");
+    if (!select) return;
+
+    if (!cameras || cameras.length <= 1) {
+        select.classList.add("hidden");
+        return;
+    }
+
+    select.innerHTML = "";
+    cameras.forEach((cam, idx) => {
+        const opt = document.createElement("option");
+        opt.value = cam.id;
+        let label = cam.label || `Kamera ${idx + 1}`;
+        if (/back|rear|environment|orqa/i.test(label)) {
+            label = "📷 Orqa Kamera";
+        } else if (/front|user|oldi|webcam/i.test(label)) {
+            label = "🤳 Oldi Kamera";
+        }
+        opt.text = label;
+        if (currentCameraId === cam.id) {
+            opt.selected = true;
+        }
+        select.appendChild(opt);
+    });
+    select.classList.remove("hidden");
+}
+
+// Multi-Level Camera Startup Strategy
+async function startCameraStream() {
+    // 1. Check if mediaDevices is supported (requires secure context or localhost)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const isSecure = window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+        if (!isSecure) {
+            throw new Error("SECURE_CONTEXT_REQUIRED");
+        }
+        throw new Error("MEDIA_DEVICES_NOT_SUPPORTED");
+    }
+
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+    }
+
+    const config = {
+        fps: 15,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const size = Math.floor(minEdge * 0.72);
+            return {
+                width: Math.max(160, Math.min(size, 260)),
+                height: Math.max(160, Math.min(size, 260))
+            };
+        },
+        aspectRatio: 1.0,
+        showTorchButtonIfSupported: true,
+        showZoomSliderIfSupported: true
+    };
+
+    // 2. Enumerate cameras if not done yet
+    try {
+        availableCameras = await Html5Qrcode.getCameras();
+        updateCameraSelectDropdown(availableCameras);
+    } catch (camErr) {
+        console.warn("Kamerlar ro'yxatini olib bo'lmadi, standart usul bilan davom etamiz:", camErr);
+    }
+
+    // 3. Attempt: specific selected camera ID
+    if (currentCameraId) {
+        try {
+            await html5QrCode.start(currentCameraId, config, onScanSuccess, onScanFailure);
+            return;
+        } catch (e) {
+            console.warn("Tanlangan camera ID ishlamadi, fallback sinoviga o'tamiz:", e);
+        }
+    }
+
+    // 4. Attempt: back/rear camera or first available camera from getCameras
+    if (availableCameras && availableCameras.length > 0) {
+        const backCam = availableCameras.find(c => /back|rear|environment|orqa/i.test(c.label));
+        const candidate = backCam || availableCameras[0];
+        try {
+            currentCameraId = candidate.id;
+            const select = document.getElementById("cameraSelect");
+            if (select) select.value = candidate.id;
+            await html5QrCode.start(candidate.id, config, onScanSuccess, onScanFailure);
+            return;
+        } catch (e) {
+            console.warn("Candidate camera ID ishlamadi, constraints bilan sinaymiz:", e);
+        }
+    }
+
+    // 5. Attempt: { facingMode: "environment" } (Back camera)
+    try {
+        await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+        return;
+    } catch (e) {
+        console.warn("facingMode: environment ishlamadi, facingMode: user bilan sinaymiz:", e);
+    }
+
+    // 6. Attempt: { facingMode: "user" } (Webcam / Laptop camera)
+    try {
+        await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, onScanFailure);
+        return;
+    } catch (e) {
+        console.warn("facingMode: user ishlamadi, ideal constraints bilan sinaymiz:", e);
+    }
+
+    // 7. Attempt: ideal constraint
+    await html5QrCode.start({ facingMode: { ideal: "environment" } }, config, onScanSuccess, onScanFailure);
+}
+
+// Toggle Live Camera on/off
 async function toggleCamera() {
     const btn = document.getElementById("toggleScannerBtn");
     const btnText = document.getElementById("scannerBtnText");
@@ -40,14 +155,20 @@ async function toggleCamera() {
 
     if (isScannerRunning) {
         if (html5QrCode) {
-            await html5QrCode.stop();
-            html5QrCode.clear();
+            try {
+                await html5QrCode.stop();
+                html5QrCode.clear();
+            } catch (e) {
+                console.log("Kamerani to'xtatishda xato:", e);
+            }
         }
         isScannerRunning = false;
-        btnText.innerText = "Kamerani Yoqish";
-        btn.classList.replace("bg-rose-600", "bg-sky-600");
-        btn.classList.replace("hover:bg-rose-500", "hover:bg-sky-500");
-        placeholder.classList.remove("hidden");
+        if (btnText) btnText.innerText = "Kamerani Yoqish";
+        if (btn) {
+            btn.classList.replace("bg-rose-600", "bg-sky-600");
+            btn.classList.replace("hover:bg-rose-500", "hover:bg-sky-500");
+        }
+        if (placeholder) placeholder.classList.remove("hidden");
         if (laserLine) laserLine.classList.add("hidden");
         if (container) {
             container.classList.remove("min-h-[260px]");
@@ -55,42 +176,106 @@ async function toggleCamera() {
         }
         notify("Kamera o'chirildi", "info");
     } else {
-        html5QrCode = new Html5Qrcode("reader");
-        const config = {
-            fps: 12,
-            qrbox: { width: 240, height: 240 },
-            aspectRatio: 1.0
-        };
-
         try {
-            placeholder.classList.add("hidden");
+            if (placeholder) placeholder.classList.add("hidden");
             if (laserLine) laserLine.classList.remove("hidden");
             if (container) {
                 container.classList.remove("min-h-[145px]");
                 container.classList.add("min-h-[260px]");
             }
 
-            await html5QrCode.start(
-                { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                onScanFailure
-            );
+            await startCameraStream();
             isScannerRunning = true;
-            btnText.innerText = "Kamerani O'chirish";
-            btn.classList.replace("bg-sky-600", "bg-rose-600");
-            btn.classList.replace("hover:bg-sky-500", "hover:bg-rose-500");
+            if (btnText) btnText.innerText = "Kamerani O'chirish";
+            if (btn) {
+                btn.classList.replace("bg-sky-600", "bg-rose-600");
+                btn.classList.replace("hover:bg-sky-500", "hover:bg-rose-500");
+            }
             notify("Kamera yoqildi. QR kodni yaqinlashtiring", "info");
         } catch (err) {
             console.error("Kamerani ochishda xato:", err);
-            placeholder.classList.remove("hidden");
+            if (placeholder) placeholder.classList.remove("hidden");
             if (laserLine) laserLine.classList.add("hidden");
             if (container) {
                 container.classList.remove("min-h-[260px]");
                 container.classList.add("min-h-[145px]");
             }
-            notify("Kamerani yoqish imkoni bo'lmadi! Ruxsat bering yoki SKU qidiruvidan foydalaning.", "danger");
+            isScannerRunning = false;
+            if (btnText) btnText.innerText = "Kamerani Yoqish";
+            if (btn) {
+                btn.classList.replace("bg-rose-600", "bg-sky-600");
+                btn.classList.replace("hover:bg-rose-500", "hover:bg-sky-500");
+            }
+
+            // Provide accurate and helpful feedback
+            const errName = err.name || "";
+            const errMsg = (err.message || "").toLowerCase();
+
+            if (err.message === "SECURE_CONTEXT_REQUIRED") {
+                notify("⚠️ Brauzer xavfsizlik talabi: Jonli kamera faqat HTTPS yoki localhost orqali ishlaydi. Pastdagi 'Rasm / Surat' tugmasidan foydalaning — u kamerangizni rasm olish orqali 100% ishlatadi!", "warning");
+            } else if (errName === "NotAllowedError" || errMsg.includes("permission") || errMsg.includes("denied")) {
+                notify("⚠️ Kameraga brauzer ruxsati berilmagan! Brauzer manzil satridagi qulf / kamera belgisini bosib ruxsat bering yoki 'Rasm / Surat' tugmasidan foydalaning.", "danger");
+            } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError" || errMsg.includes("not found")) {
+                notify("⚠️ Qurilmada kamera topilmadi! 'Rasm / Surat' tugmasi orqali rasm yuklang yoki SKU qidiruvidan foydalaning.", "warning");
+            } else if (errName === "NotReadableError" || errName === "TrackStartError" || errMsg.includes("in use")) {
+                notify("⚠️ Kamera boshqa ilova tomonidan band qilingan. Boshqa ilovalarni yopib qayta urinib ko'ring.", "warning");
+            } else {
+                notify("⚠️ Kamerani yoqish imkoni bo'lmadi. Ruxsat bering yoki 'Rasm / Surat' tugmasidan foydalaning.", "danger");
+            }
         }
+    }
+}
+
+// Switch Camera on the fly
+async function switchCamera(selectedCameraId) {
+    if (!selectedCameraId) return;
+    currentCameraId = selectedCameraId;
+    if (isScannerRunning) {
+        try {
+            await html5QrCode.stop();
+            const config = {
+                fps: 15,
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    const size = Math.floor(minEdge * 0.72);
+                    return {
+                        width: Math.max(160, Math.min(size, 260)),
+                        height: Math.max(160, Math.min(size, 260))
+                    };
+                },
+                aspectRatio: 1.0
+            };
+            await html5QrCode.start(currentCameraId, config, onScanSuccess, onScanFailure);
+            notify("Kamera almashtirildi", "info");
+        } catch (e) {
+            console.error("Kamerani almashtirishda xato:", e);
+            notify("Kamerani almashtirib bo'lmadi", "warning");
+        }
+    }
+}
+
+// Scan QR Code from File / Native Camera Photo Capture
+async function scanQrFromImageFile(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+
+    try {
+        notify("QR kod tahlil qilinmoqda...", "info");
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
+        if (isScannerRunning) {
+            await toggleCamera();
+        }
+
+        const decodedText = await html5QrCode.scanFile(file, true);
+        playScanSound();
+        lookupProduct(decodedText);
+    } catch (err) {
+        console.error("Rasm orqali QR o'qishda xato:", err);
+        notify("Suratdan QR kod topilmadi. Iltimos, QR kodni yaqinroq va yorug'roq joyda suratga oling.", "warning");
+    } finally {
+        input.value = "";
     }
 }
 
@@ -105,6 +290,10 @@ function onScanFailure(error) {
 
 async function lookupProduct(code) {
     try {
+        code = (code || "").trim();
+        if (code.includes("/")) {
+            code = code.split("/").pop().trim();
+        }
         const res = await fetch(`/api/product/by-code/${encodeURIComponent(code)}`);
         const data = await res.json();
         
@@ -181,7 +370,7 @@ function searchByManualCode() {
     lookupProduct(code);
 }
 
-// Enter key press in manual input
+// Enter key press in manual input and Auto-load camera list on page load
 document.addEventListener("DOMContentLoaded", () => {
     const manualInput = document.getElementById("manualCodeInput");
     if (manualInput) {
@@ -190,6 +379,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.preventDefault();
                 searchByManualCode();
             }
+        });
+    }
+
+    // Pre-query cameras if Html5Qrcode is available
+    if (typeof Html5Qrcode !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        Html5Qrcode.getCameras().then(cameras => {
+            if (cameras && cameras.length > 0) {
+                availableCameras = cameras;
+                updateCameraSelectDropdown(cameras);
+            }
+        }).catch(err => {
+            console.log("Kamerani oldindan aniqlashda:", err);
         });
     }
 });

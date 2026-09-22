@@ -3,8 +3,13 @@
 {% block title %}Sotuv & QR Showroom{% endblock %}
 
 {% block head_extra %}
-<!-- html5-qrcode library for camera barcode & QR code reading -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<!-- html5-qrcode library for camera barcode & QR code reading (offline first with fallback) -->
+<script src="/static/js/html5-qrcode.min.js"></script>
+<script>
+if (typeof Html5Qrcode === "undefined") {
+    document.write('<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"><\/script>');
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -49,17 +54,31 @@
             
             <!-- QR Scanner Card -->
             <div class="bg-white rounded-2xl p-4 sm:p-4.5 shadow-xs border border-slate-200/90 space-y-3">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                     <div class="flex items-center space-x-2.5">
                         <div class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-xs">
                             <i class="fa-solid fa-camera"></i>
                         </div>
                         <h2 class="font-bold text-slate-800 text-sm">Kameradan QR Kod Skanerlash</h2>
                     </div>
-                    <button id="toggleScannerBtn" onclick="toggleCamera()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
-                        <i class="fa-solid fa-video text-xs"></i>
-                        <span id="scannerBtnText">Kamerani Yoqish</span>
-                    </button>
+                    <div class="flex items-center space-x-1.5 sm:space-x-2">
+                        <!-- Kamera tanlash (agar 2 tadan ko'p bo'lsa) -->
+                        <select id="cameraSelect" onchange="switchCamera(this.value)" class="hidden text-[11px] bg-slate-100 border border-slate-300 text-slate-700 font-semibold rounded-lg px-2 py-1.5 focus:outline-none max-w-[130px] truncate">
+                        </select>
+
+                        <!-- Fayl / Rasm orqali skanerlash (Barcha qurilmalar va brauzerlarda 100% ishlaydi) -->
+                        <input type="file" id="qrFileInput" accept="image/*" capture="environment" class="hidden" onchange="scanQrFromImageFile(this)">
+                        <button type="button" onclick="document.getElementById('qrFileInput').click()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs" title="Suratga olib yoki rasmdan QR kodni o'qish">
+                            <i class="fa-solid fa-camera-retro text-xs"></i>
+                            <span class="hidden sm:inline">Rasm / Surat</span>
+                            <span class="sm:hidden">Rasm</span>
+                        </button>
+
+                        <button id="toggleScannerBtn" onclick="toggleCamera()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
+                            <i class="fa-solid fa-video text-xs"></i>
+                            <span id="scannerBtnText">Kamerani Yoqish</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Video Viewport with Laser Beam & Corners -->
@@ -79,7 +98,17 @@
                             <i class="fa-solid fa-qrcode text-xl"></i>
                         </div>
                         <p class="text-xs font-bold text-slate-200">Kamera o'chiq</p>
-                        <p class="text-[11px] text-slate-400 mt-0.5 max-w-xs leading-tight">QR stikerni o'qish uchun "Kamerani Yoqish" tugmasini bosing yoki pastdan SKU kiriting</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5 max-w-xs leading-tight">Jonli skanerlash yoki suratga olib QR kodni bir zumda o'qish imkoniyati</p>
+                        <div class="mt-2.5 flex items-center gap-2">
+                            <button type="button" onclick="toggleCamera()" class="bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
+                                <i class="fa-solid fa-video text-xs"></i>
+                                <span>Jonli Kamera</span>
+                            </button>
+                            <button type="button" onclick="document.getElementById('qrFileInput').click()" class="bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
+                                <i class="fa-solid fa-camera-retro text-xs"></i>
+                                <span>Suratga Olish / Rasm</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
