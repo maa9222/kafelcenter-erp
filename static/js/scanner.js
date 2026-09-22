@@ -67,7 +67,11 @@ function updateCameraSelectDropdown(cameras) {
     }
 
     select.innerHTML = "";
-    cameras.forEach((cam, idx) => {
+    // Filter out obvious printers/scanners if real webcams exist
+    const nonScanners = cameras.filter(c => !/epson|scanner|printer|fax|virtual/i.test(c.label || ""));
+    const displayList = nonScanners.length > 0 ? nonScanners : cameras;
+
+    displayList.forEach((cam, idx) => {
         const opt = document.createElement("option");
         opt.value = cam.id;
         let label = cam.label || `Kamera ${idx + 1}`;
@@ -87,12 +91,21 @@ function updateCameraSelectDropdown(cameras) {
         select.appendChild(opt);
     });
 
-    select.classList.remove("hidden");
+    if (!currentCameraId && displayList.length > 0) {
+        currentCameraId = displayList[0].id;
+        select.value = currentCameraId;
+    }
+
+    if (displayList.length > 1) {
+        select.classList.remove("hidden");
+    } else {
+        select.classList.add("hidden");
+    }
 }
 
 // Start Camera Stream directly and safely
 async function startCameraStream() {
-    if (!navigator.mediaDevices) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("MEDIA_DEVICES_NOT_SUPPORTED");
     }
 
@@ -106,21 +119,23 @@ async function startCameraStream() {
     const readerEl = document.getElementById("reader");
     if (readerEl) readerEl.innerHTML = "";
 
-    html5QrCode = new Html5Qrcode("reader");
-
-    const scanConfig = {
-        fps: 15,
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const size = Math.max(120, Math.min(Math.floor(minEdge * 0.72), 240));
-            return { width: size, height: size };
-        }
-    };
-
     // 1. Get available cameras
     let cameras = [];
     try {
-        const rawCameras = await Html5Qrcode.getCameras();
+        let rawCameras = await Html5Qrcode.getCameras();
+
+        // If labels are empty (happens when permission not granted before getCameras),
+        // run a quick getUserMedia to trigger permissions and populate real device labels
+        if (!rawCameras || rawCameras.length === 0 || !rawCameras.some(c => c.label)) {
+            try {
+                const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                tempStream.getTracks().forEach(t => t.stop());
+                rawCameras = await Html5Qrcode.getCameras();
+            } catch (permErr) {
+                console.warn("Initial getUserMedia test error:", permErr);
+            }
+        }
+
         if (rawCameras && rawCameras.length > 0) {
             cameras = prioritizeCameras(rawCameras);
             availableCameras = cameras;
@@ -130,28 +145,55 @@ async function startCameraStream() {
         console.warn("getCameras xatosi:", camErr);
     }
 
-    // 2. Try starting with prioritized cameras
+    const scanConfig = {
+        fps: 10,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            if (!viewfinderWidth || !viewfinderHeight || viewfinderWidth <= 0 || viewfinderHeight <= 0) {
+                return { width: 220, height: 220 };
+            }
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const size = Math.max(120, Math.min(Math.floor(minEdge * 0.72), 240));
+            return { width: size, height: size };
+        }
+    };
+
+    // Helper to start an instance cleanly
+    async function tryStart(cameraConfig) {
+        if (html5QrCode) {
+            try { await html5QrCode.stop(); } catch (_) {}
+            try { html5QrCode.clear(); } catch (_) {}
+            html5QrCode = null;
+        }
+        if (readerEl) readerEl.innerHTML = "";
+        html5QrCode = new Html5Qrcode("reader");
+        await html5QrCode.start(cameraConfig, scanConfig, onScanSuccess, onScanFailure);
+    }
+
     let started = false;
     let lastErr = null;
 
-    if (cameras && cameras.length > 0) {
-        let listToTry = [...cameras];
-        if (currentCameraId) {
-            const chosen = cameras.find(c => c.id === currentCameraId);
-            if (chosen) {
-                listToTry = [chosen, ...cameras.filter(c => c.id !== currentCameraId)];
-            }
+    // Filter cameras to exclude printers/scanners (like Epson)
+    const validCameras = cameras.filter(c => !/epson|scanner|printer|fax|virtual/i.test(c.label || ""));
+    const cameraList = validCameras.length > 0 ? validCameras : cameras;
+
+    // 2. Try starting with selected or prioritized cameras
+    if (currentCameraId) {
+        try {
+            console.log("Tanlangan kamera ishga tushirilmoqda:", currentCameraId);
+            await tryStart(currentCameraId);
+            started = true;
+        } catch (e) {
+            console.warn("currentCameraId muvaffaqiyatsiz bo'ldi:", e);
+            lastErr = e;
         }
+    }
 
-        for (const cam of listToTry) {
-            // Skip non-cameras (like Epson) if other cameras exist
-            if (/epson|scanner|printer/i.test(cam.label) && listToTry.length > 1) {
-                continue;
-            }
-
+    if (!started && cameraList && cameraList.length > 0) {
+        for (const cam of cameraList) {
+            if (cam.id === currentCameraId) continue;
             try {
                 console.log("Kamera ishga tushirilmoqda:", cam.label, cam.id);
-                await html5QrCode.start(cam.id, scanConfig, onScanSuccess, onScanFailure);
+                await tryStart(cam.id);
                 currentCameraId = cam.id;
                 const select = document.getElementById("cameraSelect");
                 if (select) select.value = cam.id;
@@ -160,17 +202,27 @@ async function startCameraStream() {
             } catch (e) {
                 console.warn("Kamera ochilmadi, keyingisiga o'tamiz:", cam.label, e);
                 lastErr = e;
-                try { await html5QrCode.stop(); } catch (_) {}
-                try { html5QrCode.clear(); } catch (_) {}
             }
         }
     }
 
-    // 3. Fallback: try user facing camera
+    // 3. Fallback: Generic constraints object (no ID, requests standard USB PC Camera)
+    if (!started) {
+        try {
+            console.log("Fallback: generic constraints {} bilan urinilmoqda...");
+            await tryStart({});
+            started = true;
+        } catch (e) {
+            console.warn("Generic constraints {} ishlamadi:", e);
+            lastErr = e;
+        }
+    }
+
+    // 4. Fallback: try user facing camera
     if (!started) {
         try {
             console.log("Fallback: facingMode user bilan urinilmoqda...");
-            await html5QrCode.start({ facingMode: "user" }, scanConfig, onScanSuccess, onScanFailure);
+            await tryStart({ facingMode: "user" });
             started = true;
         } catch (e) {
             console.warn("facingMode user ishlamadi:", e);
@@ -178,11 +230,11 @@ async function startCameraStream() {
         }
     }
 
-    // 4. Fallback: try environment facing camera
+    // 5. Fallback: try environment facing camera
     if (!started) {
         try {
             console.log("Fallback: facingMode environment bilan urinilmoqda...");
-            await html5QrCode.start({ facingMode: "environment" }, scanConfig, onScanSuccess, onScanFailure);
+            await tryStart({ facingMode: "environment" });
             started = true;
         } catch (e) {
             console.warn("facingMode environment ishlamadi:", e);
@@ -190,17 +242,9 @@ async function startCameraStream() {
         }
     }
 
-    // 5. Fallback: default video track (true)
     if (!started) {
-        try {
-            console.log("Fallback: default video (true) bilan urinilmoqda...");
-            await html5QrCode.start(true, scanConfig, onScanSuccess, onScanFailure);
-            started = true;
-        } catch (e) {
-            console.warn("Default video (true) ishlamadi:", e);
-            lastErr = e;
-            throw lastErr;
-        }
+        if (lastErr) throw lastErr;
+        throw new Error("Kamera topilmadi yoki ochilmadi");
     }
 }
 
@@ -276,11 +320,13 @@ async function toggleCamera() {
 
             const errStr = (typeof err === "string" ? err : (err.message || err.name || String(err))).toLowerCase();
 
-            if (errStr.includes("notreadable") || errStr.includes("trackstart")) {
-                notify("⚠️ Kamera band! Brauzer sozlamalari oynasini (preview) yopib qayta bosing.", "warning");
+            if (errStr.includes("notreadable") || errStr.includes("trackstart") || errStr.includes("could not start video source")) {
+                notify("⚠️ Kamera band! Agar brauzer yuqorisida kamera oynasi (preview) ochiq bo'lsa, uni yopib qayta bosing.", "warning");
             } else if (errStr.includes("notallowed") || errStr.includes("permission")) {
                 notify("⚠️ Kameraga brauzer ruxsati berilmadi! Brauzer manzilidagi qulf belgisidan ruxsat bering.", "danger");
-            } else if (errStr.includes("notfound")) {
+            } else if (errStr.includes("overconstrained")) {
+                notify("⚠️ Kamera o'lchamlari mos kelmadi. Boshqa kamerani tanlang.", "warning");
+            } else if (errStr.includes("notfound") || errStr.includes("devices_not_supported")) {
                 notify("⚠️ Kamera topilmadi! USB kamera ulanganligini tekshiring.", "warning");
             } else {
                 notify(`⚠️ Kamera ochilmadi: ${err.message || err}`, "danger");
@@ -295,16 +341,7 @@ async function switchCamera(selectedCameraId) {
     currentCameraId = selectedCameraId;
     if (isScannerRunning) {
         try {
-            await html5QrCode.stop();
-            const scanConfig = {
-                fps: 15,
-                qrbox: function(viewfinderWidth, viewfinderHeight) {
-                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    const size = Math.max(120, Math.min(Math.floor(minEdge * 0.72), 240));
-                    return { width: size, height: size };
-                }
-            };
-            await html5QrCode.start(currentCameraId, scanConfig, onScanSuccess, onScanFailure);
+            await startCameraStream();
             notify("Kamera almashtirildi", "info");
         } catch (e) {
             console.error("Kamerani almashtirishda xato:", e);
@@ -445,8 +482,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (typeof Html5Qrcode !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
         Html5Qrcode.getCameras().then(cameras => {
             if (cameras && cameras.length > 0) {
-                availableCameras = cameras;
-                updateCameraSelectDropdown(cameras);
+                const prioritized = prioritizeCameras(cameras);
+                availableCameras = prioritized;
+                updateCameraSelectDropdown(prioritized);
             }
         }).catch(err => {
             console.log("Kamerani oldindan aniqlashda:", err);
