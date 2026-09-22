@@ -17,6 +17,10 @@
             <p class="text-xs sm:text-sm text-slate-500 mt-1">Ombordagi barcha kafellar zaxirasi, qoldiqlar va QR kod stikerlari</p>
         </div>
         <div class="flex items-center space-x-2">
+            <a href="/export/excel/ombor{% if brand_filter %}?brand={{ brand_filter }}{% endif %}" class="inline-flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-4 py-2.5 rounded-2xl border border-emerald-300 shadow-sm transition text-xs sm:text-sm" title="Ombor qoldiqlarini Excelga (.xlsx) yuklash">
+                <i class="fa-solid fa-file-excel text-emerald-600 text-base"></i>
+                <span>Excelga yuklash</span>
+            </a>
             <a href="/ombor/siniqlar" class="inline-flex items-center space-x-2 bg-white hover:bg-rose-50 text-rose-700 font-bold px-4 py-2.5 rounded-2xl border border-rose-200 shadow-sm transition text-xs sm:text-sm">
                 <i class="fa-solid fa-heart-crack text-rose-500"></i>
                 <span>Siniqlar & Brak Bo'limi</span>

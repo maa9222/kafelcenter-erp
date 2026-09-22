@@ -8,12 +8,13 @@ from collections import defaultdict
 from urllib.parse import urlparse, urljoin
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, flash, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, flash, session, send_file
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash
 from PIL import Image
 
 import database
+import excel_utils
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -2816,6 +2817,890 @@ def kpi_dashboard():
         usta_chart_clients=json.dumps(usta_chart_clients),
         usta_chart_revenues=json.dumps(usta_chart_revenues),
         usta_chart_sqm=json.dumps(usta_chart_sqm)
+    )
+
+# -----------------------------------------------------------------------------
+# EXCEL (.XLSX) EXPORT MARSHRUTLARI (ALOHIDA-ALOHIDA BO'LIMLAR UCHUN)
+# -----------------------------------------------------------------------------
+
+@app.route("/export/excel/ombor")
+@role_required(["admin", "omborchi"])
+def export_excel_ombor():
+    """Ombordagi kafel qoldiqlari ro'yxatini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "omborchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+    brand = request.args.get("brand", "").strip()
+    status = request.args.get("status", "").strip()
+    q = request.args.get("q", "").strip()
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    query = "SELECT * FROM products WHERE 1=1"
+    params = []
+    if brand:
+        query += " AND brand = ?"
+        params.append(brand)
+    if q:
+        query += " AND (brand LIKE ? OR model_name LIKE ? OR sku LIKE ? OR size LIKE ?)"
+        term = f"%{q}%"
+        params.extend([term, term, term, term])
+    if status == "low":
+        query += " AND quantity_in_stock <= min_stock_alert"
+    elif status == "out":
+        query += " AND quantity_in_stock = 0"
+    query += " ORDER BY brand ASC, model_name ASC"
+    cursor.execute(query, params)
+    products = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    if user_role == "admin":
+        headers = [
+            "№", "SKU", "Marka / Zavod", "Model Nomi", "O'lchami", 
+            "Mavjud Qoldiq (m²)", "Qutilar Soni", "Donalar Soni", 
+            "Joylashuv (Polka)", "1 m² Narxi", "1 Quti Narxi", 
+            "Zaxira Qiymati", "Holat"
+        ]
+        col_formats = {
+            0: "int", 1: "left", 2: "left", 3: "left", 4: "center",
+            5: "sqm", 6: "int", 7: "int", 8: "center",
+            9: "currency", 10: "currency", 11: "currency", 12: "center"
+        }
+        rows = []
+        for idx, p in enumerate(products, 1):
+            sqm = p.get("quantity_in_stock") or 0.0
+            price = p.get("price") or 0.0
+            sqm_box = p.get("sqm_per_box") or 1.44
+            box_price = price * sqm_box
+            total_val = sqm * price
+            boxes = int(sqm // sqm_box) if sqm_box > 0 else 0
+            pcs = int(p.get("pieces_count") or 0)
+            
+            if sqm <= 0:
+                st = "Tugagan"
+            elif sqm <= (p.get("min_stock_alert") or 10):
+                st = "Kam qolgan"
+            else:
+                st = "Zaxirada mavjud"
+
+            rows.append([
+                idx, p.get("sku"), p.get("brand"), p.get("model_name"), p.get("size"),
+                sqm, boxes, pcs, p.get("location_rack") or "-",
+                price, box_price, total_val, st
+            ])
+    else:
+        headers = [
+            "№", "SKU", "Marka / Zavod", "Model Nomi", "O'lchami", 
+            "Mavjud Qoldiq (m²)", "Qutilar Soni", "Donalar Soni", 
+            "Joylashuv (Polka)", "Holat"
+        ]
+        col_formats = {
+            0: "int", 1: "left", 2: "left", 3: "left", 4: "center",
+            5: "sqm", 6: "int", 7: "int", 8: "center", 9: "center"
+        }
+        rows = []
+        for idx, p in enumerate(products, 1):
+            sqm = p.get("quantity_in_stock") or 0.0
+            sqm_box = p.get("sqm_per_box") or 1.44
+            boxes = int(sqm // sqm_box) if sqm_box > 0 else 0
+            pcs = int(p.get("pieces_count") or 0)
+            
+            if sqm <= 0:
+                st = "Tugagan"
+            elif sqm <= (p.get("min_stock_alert") or 10):
+                st = "Kam qolgan"
+            else:
+                st = "Zaxirada mavjud"
+
+            rows.append([
+                idx, p.get("sku"), p.get("brand"), p.get("model_name"), p.get("size"),
+                sqm, boxes, pcs, p.get("location_rack") or "-", st
+            ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Ombor Qoldiqlari",
+        report_title="Ombordagi Kafellar Zaxirasi va Qoldiqlari",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"ombor_qoldiqlari_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/hisobot/savdolar")
+@role_required(["admin", "sotuvchi", "omborchi"])
+def export_excel_savdolar():
+    """Savdolar hisoboti va topshirish auditini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "sotuvchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+    seller_param = request.args.get("seller", "all").strip()
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+
+    if user_role == "sotuvchi":
+        cursor.execute("""
+            SELECT o.*, 
+                   COALESCE((SELECT SUM(quantity) FROM order_items WHERE order_id = o.id), 0.0) as total_sqm,
+                   COALESCE((SELECT GROUP_CONCAT(p.brand || ' ' || p.model_name || ' (' || oi.quantity || ' m²)', '; ')
+                             FROM order_items oi JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id), '') as items_desc
+            FROM orders o
+            WHERE o.seller_name = ?
+            ORDER BY o.id DESC
+        """, (user_name,))
+    elif user_role == "admin" and seller_param and seller_param != "all":
+        cursor.execute("""
+            SELECT o.*, 
+                   COALESCE((SELECT SUM(quantity) FROM order_items WHERE order_id = o.id), 0.0) as total_sqm,
+                   COALESCE((SELECT GROUP_CONCAT(p.brand || ' ' || p.model_name || ' (' || oi.quantity || ' m²)', '; ')
+                             FROM order_items oi JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id), '') as items_desc
+            FROM orders o
+            WHERE o.seller_name = ?
+            ORDER BY o.id DESC
+        """, (seller_param,))
+    else:
+        cursor.execute("""
+            SELECT o.*, 
+                   COALESCE((SELECT SUM(quantity) FROM order_items WHERE order_id = o.id), 0.0) as total_sqm,
+                   COALESCE((SELECT GROUP_CONCAT(p.brand || ' ' || p.model_name || ' (' || oi.quantity || ' m²)', '; ')
+                             FROM order_items oi JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id), '') as items_desc
+            FROM orders o
+            ORDER BY o.id DESC
+        """)
+    orders = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    if user_role == "omborchi":
+        headers = [
+            "№", "Nakladnoy №", "Sana", "Xaridor Ismi", "Telefon",
+            "Sotuvchi", "Tovar Spiskasi", "Jami Hajm (m²)", 
+            "Topshirish Holati", "Topshirdi", "Topshirilgan Vaqt", "Ombor Izohi"
+        ]
+        col_formats = {
+            0: "int", 1: "center", 2: "center", 3: "left", 4: "left",
+            5: "left", 6: "left", 7: "sqm", 8: "center", 9: "left", 10: "center", 11: "left"
+        }
+        rows = []
+        for idx, o in enumerate(orders, 1):
+            st = "Topshirilgan" if o.get("status") == "yuk_berildi" else "Kutilmoqda (Omborda)"
+            rows.append([
+                idx, o.get("order_number"), o.get("created_at"), o.get("customer_name") or "-",
+                o.get("customer_phone") or "-", o.get("seller_name") or "-",
+                o.get("items_desc") or "-", o.get("total_sqm") or 0.0,
+                st, o.get("dispatched_by") or "-", o.get("dispatched_at") or "-",
+                o.get("warehouse_note") or "-"
+            ])
+    else:
+        headers = [
+            "№", "Nakladnoy №", "Sana", "Xaridor Ismi", "Telefon",
+            "Sotuvchi", "To'lov Usuli", "Tovar Spiskasi", "Jami Hajm (m²)",
+            "Jami Summa", "Topshirish Holati", "Topshirdi", "Topshirilgan Vaqt"
+        ]
+        col_formats = {
+            0: "int", 1: "center", 2: "center", 3: "left", 4: "left",
+            5: "left", 6: "center", 7: "left", 8: "sqm", 9: "currency",
+            10: "center", 11: "left", 12: "center"
+        }
+        rows = []
+        for idx, o in enumerate(orders, 1):
+            st = "Topshirilgan" if o.get("status") == "yuk_berildi" else "Kutilmoqda (Omborda)"
+            rows.append([
+                idx, o.get("order_number"), o.get("created_at"), o.get("customer_name") or "-",
+                o.get("customer_phone") or "-", o.get("seller_name") or "-",
+                (o.get("payment_method") or "naqd").capitalize(),
+                o.get("items_desc") or "-", o.get("total_sqm") or 0.0,
+                o.get("total_amount") or 0.0, st,
+                o.get("dispatched_by") or "-", o.get("dispatched_at") or "-"
+            ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Savdolar Hisoboti",
+        report_title="Savdolar va Buyurtmalar Auditi Hisoboti",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"savdolar_hisoboti_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/hisobot/kirim")
+@role_required(["admin", "omborchi"])
+def export_excel_kirim():
+    """Omborga kirim tarixi partiyalarini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "omborchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT sh.id, sh.quantity_change, sh.reference_id, sh.user_name, sh.created_at, sh.note,
+               p.brand, p.model_name, p.sku, p.size, p.location_rack, p.box_size_m2
+        FROM stock_history sh
+        JOIN products p ON sh.product_id = p.id
+        WHERE sh.change_type = 'kirim'
+        ORDER BY sh.id DESC
+    """)
+    records = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    headers = [
+        "№", "Partiya №", "Qabul Sanasi", "Marka / Zavod", "Model Nomi",
+        "SKU", "O'lchami", "Qabul Qilingan (m²)", "Qutilar", 
+        "Joylashuv (Polka)", "Qabul Qildi", "Izoh"
+    ]
+    col_formats = {
+        0: "int", 1: "left", 2: "center", 3: "left", 4: "left",
+        5: "left", 6: "center", 7: "sqm", 8: "int",
+        9: "center", 10: "left", 11: "left"
+    }
+    rows = []
+    for idx, r in enumerate(records, 1):
+        sqm = r.get("quantity_change") or 0.0
+        box_size = r.get("box_size_m2") or 1.44
+        boxes = int(sqm // box_size) if box_size > 0 else 0
+        rows.append([
+            idx, r.get("reference_id") or f"P-{r['id']:04d}",
+            r.get("created_at"), r.get("brand"), r.get("model_name"),
+            r.get("sku"), r.get("size"), sqm,
+            boxes, r.get("location_rack") or "-",
+            r.get("user_name") or "-", r.get("note") or "-"
+        ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Kirim Tarixi",
+        report_title="Omborga Kafel Qabul Qilish (Kirim) Tarixi",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"kirim_tarixi_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/hisobot/balans")
+@role_required(["admin", "omborchi"])
+def export_excel_balans():
+    """Ombor qoldig'i va harakat balansini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "omborchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT p.id, p.sku, p.brand, p.model_name, p.size, p.price, p.location_rack,
+               p.quantity_in_stock as current_stock,
+               COALESCE((SELECT SUM(quantity_change) FROM stock_history WHERE product_id = p.id AND change_type = 'kirim'), 0.0) as total_inbound,
+               COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = p.id AND o.status IN ('tolandi', 'yuk_berildi')), 0.0) as total_sold,
+               COALESCE((SELECT SUM(quantity) FROM broken_tiles WHERE product_id = p.id), 0.0) as total_broken
+        FROM products p
+        ORDER BY p.brand ASC, p.model_name ASC
+    """)
+    records = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    if user_role == "admin":
+        headers = [
+            "№", "SKU", "Marka / Zavod", "Model Nomi", "O'lchami",
+            "Jami Kirim (m²)", "Jami Sotuv (m²)", "Siniq/Brak (m²)", "Mavjud Qoldiq (m²)",
+            "Joylashuv (Polka)", "1 m² Narxi", "Zaxira Qiymati", "Holati"
+        ]
+        col_formats = {
+            0: "int", 1: "left", 2: "left", 3: "left", 4: "center",
+            5: "sqm", 6: "sqm", 7: "sqm", 8: "sqm",
+            9: "center", 10: "currency", 11: "currency", 12: "center"
+        }
+        rows = []
+        for idx, r in enumerate(records, 1):
+            stock = r.get("current_stock") or 0.0
+            price = r.get("price") or 0.0
+            val = stock * price
+            st = "Tugagan" if stock <= 0 else ("Kam qolgan" if stock <= 10 else "Zaxirada mavjud")
+            rows.append([
+                idx, r.get("sku"), r.get("brand"), r.get("model_name"), r.get("size"),
+                r.get("total_inbound") or 0.0, r.get("total_sold") or 0.0, r.get("total_broken") or 0.0,
+                stock, r.get("location_rack") or "-", price, val, st
+            ])
+    else:
+        headers = [
+            "№", "SKU", "Marka / Zavod", "Model Nomi", "O'lchami",
+            "Jami Kirim (m²)", "Jami Sotuv (m²)", "Siniq/Brak (m²)", "Mavjud Qoldiq (m²)",
+            "Joylashuv (Polka)", "Holati"
+        ]
+        col_formats = {
+            0: "int", 1: "left", 2: "left", 3: "left", 4: "center",
+            5: "sqm", 6: "sqm", 7: "sqm", 8: "sqm",
+            9: "center", 10: "center"
+        }
+        rows = []
+        for idx, r in enumerate(records, 1):
+            stock = r.get("current_stock") or 0.0
+            st = "Tugagan" if stock <= 0 else ("Kam qolgan" if stock <= 10 else "Zaxirada mavjud")
+            rows.append([
+                idx, r.get("sku"), r.get("brand"), r.get("model_name"), r.get("size"),
+                r.get("total_inbound") or 0.0, r.get("total_sold") or 0.0, r.get("total_broken") or 0.0,
+                stock, r.get("location_rack") or "-", st
+            ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Qoldiq & Balans",
+        report_title="Ombor Qoldig'i & Harakat Balansi Vedomosti",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"ombor_balans_qoldiq_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/hisobot/markalar")
+@role_required(["admin", "omborchi"])
+def export_excel_markalar():
+    """Zavodlar va markalar tahlilini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "omborchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT p.brand,
+               COUNT(p.id) as models_count,
+               COALESCE((SELECT SUM(sh.quantity_change) FROM stock_history sh JOIN products p2 ON sh.product_id = p2.id WHERE p2.brand = p.brand AND sh.change_type = 'kirim'), 0.0) as total_kirim_m2,
+               COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN products p3 ON oi.product_id = p3.id JOIN orders o ON oi.order_id = o.id WHERE p3.brand = p.brand AND o.status IN ('tolandi', 'yuk_berildi')), 0.0) as total_sotuv_m2,
+               COALESCE(SUM(p.quantity_in_stock), 0.0) as stock_m2,
+               COALESCE(SUM(p.quantity_in_stock * p.price), 0.0) as stock_value,
+               COALESCE((SELECT SUM(oi.total_price) FROM order_items oi JOIN products p4 ON oi.product_id = p4.id JOIN orders o2 ON oi.order_id = o2.id WHERE p4.brand = p.brand AND o2.status IN ('tolandi', 'yuk_berildi')), 0.0) as total_revenue
+        FROM products p
+        GROUP BY p.brand
+        ORDER BY stock_m2 DESC, p.brand ASC
+    """)
+    records = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    total_stock_all = sum(r["stock_m2"] for r in records) or 1.0
+    for r in records:
+        r["share_pct"] = round((r["stock_m2"] / total_stock_all) * 100, 1)
+
+    if user_role == "admin":
+        headers = [
+            "№", "Marka / Zavod Nomi", "Modellar Soni", "Jami Kirim (m²)",
+            "Jami Sotuv (m²)", "Ombordagi Qoldiq (m²)", "Zaxira Ulushi (%)",
+            "Savdo Tushumi", "Zaxira Qiymati"
+        ]
+        col_formats = {
+            0: "int", 1: "left", 2: "int", 3: "sqm", 4: "sqm",
+            5: "sqm", 6: "pct", 7: "currency", 8: "currency"
+        }
+        rows = []
+        for idx, r in enumerate(records, 1):
+            rows.append([
+                idx, r.get("brand"), r.get("models_count"), r.get("total_kirim_m2"),
+                r.get("total_sotuv_m2"), r.get("stock_m2"), r.get("share_pct"),
+                r.get("total_revenue"), r.get("stock_value")
+            ])
+    else:
+        headers = [
+            "№", "Marka / Zavod Nomi", "Modellar Soni", "Jami Kirim (m²)",
+            "Jami Sotuv (m²)", "Ombordagi Qoldiq (m²)", "Zaxira Ulushi (%)"
+        ]
+        col_formats = {
+            0: "int", 1: "left", 2: "int", 3: "sqm", 4: "sqm", 5: "sqm", 6: "pct"
+        }
+        rows = []
+        for idx, r in enumerate(records, 1):
+            rows.append([
+                idx, r.get("brand"), r.get("models_count"), r.get("total_kirim_m2"),
+                r.get("total_sotuv_m2"), r.get("stock_m2"), r.get("share_pct")
+            ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Kafel Markalari",
+        report_title="Zavodlar va Markalar Kesimida Zaxira Tahlili",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"markalar_tahlili_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/hisobot/siniqlar")
+@role_required(["admin", "omborchi"])
+def export_excel_siniqlar():
+    """Siniq va brak kafellar hisobotini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "omborchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT bt.id, bt.quantity, bt.unit, bt.reason, bt.responsible_person,
+               bt.status, bt.created_at, bt.created_by as user_name, bt.note, bt.loss_amount,
+               p.brand, p.model_name, p.size, p.sku
+        FROM broken_tiles bt
+        JOIN products p ON bt.product_id = p.id
+        ORDER BY bt.id DESC
+    """)
+    records = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    if user_role == "admin":
+        headers = [
+            "№", "Qayd ID", "Sana", "Marka / Zavod", "Model Nomi",
+            "SKU", "Singan Miqdor", "Birlik", "Sababi", "Mas'ul Shaxs",
+            "Yetkazilgan Zarar", "Holati", "Qayd Etgan Xodim", "Izoh"
+        ]
+        col_formats = {
+            0: "int", 1: "int", 2: "center", 3: "left", 4: "left",
+            5: "left", 6: "sqm", 7: "center", 8: "left", 9: "left",
+            10: "currency", 11: "center", 12: "left", 13: "left"
+        }
+        rows = []
+        for idx, r in enumerate(records, 1):
+            st = "Omborda" if r.get("status") == "omborda" else ("Sotildi" if r.get("status") == "arzon_sotildi" else "Chiqarildi")
+            rows.append([
+                idx, r.get("id"), r.get("created_at"), r.get("brand"), r.get("model_name"),
+                r.get("sku"), r.get("quantity") or 0.0, r.get("unit") or "m²",
+                r.get("reason") or "-", r.get("responsible_person") or "-",
+                r.get("loss_amount") or 0.0, st, r.get("user_name") or "-", r.get("note") or "-"
+            ])
+    else:
+        headers = [
+            "№", "Qayd ID", "Sana", "Marka / Zavod", "Model Nomi",
+            "SKU", "Singan Miqdor", "Birlik", "Sababi", "Mas'ul Shaxs",
+            "Holati", "Qayd Etgan Xodim", "Izoh"
+        ]
+        col_formats = {
+            0: "int", 1: "int", 2: "center", 3: "left", 4: "left",
+            5: "left", 6: "sqm", 7: "center", 8: "left", 9: "left",
+            10: "center", 11: "left", 12: "left"
+        }
+        rows = []
+        for idx, r in enumerate(records, 1):
+            st = "Omborda" if r.get("status") == "omborda" else ("Sotildi" if r.get("status") == "arzon_sotildi" else "Chiqarildi")
+            rows.append([
+                idx, r.get("id"), r.get("created_at"), r.get("brand"), r.get("model_name"),
+                r.get("sku"), r.get("quantity") or 0.0, r.get("unit") or "m²",
+                r.get("reason") or "-", r.get("responsible_person") or "-",
+                st, r.get("user_name") or "-", r.get("note") or "-"
+            ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Siniq & Braklar",
+        report_title="Siniq va Defekt Kafellar Jurnali",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"siniq_brak_kafellar_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/hisobot/audit-log")
+@role_required(["admin", "sotuvchi", "omborchi"])
+def export_excel_audit_log():
+    """Tizimdagi barcha amallar va harakatlar audit logini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "sotuvchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+    action_filter = request.args.get("action", "").strip()
+
+    if user_role == "sotuvchi":
+        logs = database.get_action_logs(limit=1000, user_name=user_name, action_type=(action_filter or None))
+    elif user_role == "omborchi":
+        all_logs = database.get_action_logs(limit=1000, action_type=(action_filter or None))
+        logs = [l for l in all_logs if l["target_type"] in ('kafel', 'kirim', 'siniq', 'zavod', 'ombor') or l["action_type"] == 'topshirdi']
+    else:
+        logs = database.get_action_logs(limit=1000, action_type=(action_filter or None))
+
+    headers = [
+        "№", "Log ID", "Sana va Vaqt", "Xodim Ismi", "Xodim Roli",
+        "Amal Turi", "Bo'lim / Obyekt", "Amal Sarlavhasi", "Tavsif", "IP Manzil"
+    ]
+    col_formats = {
+        0: "int", 1: "int", 2: "center", 3: "left", 4: "center",
+        5: "center", 6: "center", 7: "left", 8: "left", 9: "center"
+    }
+    rows = []
+    for idx, l in enumerate(logs, 1):
+        rows.append([
+            idx, l.get("id"), l.get("created_at"), l.get("user_name"),
+            (l.get("user_role") or "").upper(), (l.get("action_type") or "").upper(),
+            (l.get("target_type") or "").upper(), l.get("title"),
+            l.get("description") or "-", l.get("ip_address") or "-"
+        ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Amallar Tarixi",
+        report_title="Tizimdagi Amallar va Harakatlar Audit Jurnali",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"amallar_audit_log_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/hisobot/umumiy")
+@role_required(["admin"])
+def export_excel_umumiy():
+    """Do'kon va Ombor Umumiy Bosh Balans Vedomostini Excel (.xlsx) ga yuklash (Faqat Admin)"""
+    user_name = session.get("full_name") or session.get("username", "Admin")
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COALESCE(SUM(quantity_change), 0.0) as sqm, COUNT(*) as cnt FROM stock_history WHERE change_type = 'kirim'")
+    inb = dict(cursor.fetchone() or {})
+
+    cursor.execute("SELECT COALESCE(SUM(total_amount), 0.0) as rev, COUNT(*) as cnt FROM orders WHERE status IN ('tolandi', 'yuk_berildi')")
+    ord_stats = dict(cursor.fetchone() or {})
+
+    cursor.execute("SELECT COALESCE(SUM(quantity), 0.0) as sqm FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.status IN ('tolandi', 'yuk_berildi')")
+    sold_sqm_row = cursor.fetchone()
+    sold_sqm = sold_sqm_row[0] if sold_sqm_row and sold_sqm_row[0] else 0.0
+
+    cursor.execute("SELECT COALESCE(SUM(quantity_in_stock), 0.0) as stock_sqm, COALESCE(SUM(quantity_in_stock * price), 0.0) as stock_val, COUNT(*) as models_cnt FROM products")
+    stock_stats = dict(cursor.fetchone() or {})
+
+    cursor.execute("SELECT COALESCE(SUM(quantity), 0.0) as broken_sqm, COALESCE(SUM(loss_amount), 0.0) as loss_val, COUNT(*) as cnt FROM broken_tiles")
+    broken_stats = dict(cursor.fetchone() or {})
+
+    cursor.execute("SELECT COUNT(*) as dispatched_cnt FROM orders WHERE status = 'yuk_berildi'")
+    disp_row = cursor.fetchone()
+    disp_cnt = disp_row[0] if disp_row and disp_row[0] else 0
+
+    cursor.execute("SELECT payment_method, COUNT(*) as cnt, COALESCE(SUM(total_amount), 0.0) as total FROM orders WHERE status IN ('tolandi', 'yuk_berildi') GROUP BY payment_method")
+    pay_methods = [dict(r) for r in cursor.fetchall()]
+
+    conn.close()
+
+    headers = ["№", "Asosiy Ko'rsatkich", "Kafel Hajmi (m²)", "Moliyaviy Qiymat", "Partiya / Cheklar", "Holat / Izoh"]
+    col_formats = {0: "int", 1: "left", 2: "sqm", 3: "currency", 4: "center", 5: "left"}
+    rows = [
+        [1, "1. Jami Omborga Qabul Qilingan Kafel", inb.get("sqm", 0.0), 0.0, f"{inb.get('cnt', 0)} ta partiya", "Omborga qabul qilingan"],
+        [2, "2. Jami Sotilgan Kafel va Kassa Tushumi", sold_sqm, ord_stats.get("rev", 0.0), f"{ord_stats.get('cnt', 0)} ta chek", "Savdo daromadi"],
+        [3, "3. Omborda Mavjud Real Tovar Zaxirasi", stock_stats.get("stock_sqm", 0.0), stock_stats.get("stock_val", 0.0), f"{stock_stats.get('models_cnt', 0)} xil model", "Mavjud aktiv zaxira"],
+        [4, "4. Siniq va Brak Kafellar (Zarar)", broken_stats.get("broken_sqm", 0.0), broken_stats.get("loss_val", 0.0), f"{broken_stats.get('cnt', 0)} ta holat", "Do'konga yetkazilgan zarar"],
+        [5, "5. Ombordan Yuk Topshirish Holati", float(disp_cnt), 0.0, f"{disp_cnt} / {ord_stats.get('cnt', 0)} topshirildi", "Logistika intizomi"],
+    ]
+
+    for p in pay_methods:
+        rows.append([
+            len(rows) + 1,
+            f"To'lov Turi: {(p.get('payment_method') or 'Naqd').upper()}",
+            0.0, p.get("total", 0.0), f"{p.get('cnt', 0)} ta chek", "Kassa tushumi taqsimoti"
+        ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Bosh Balans",
+        report_title="Do'kon va Ombor Umumiy Bosh Balans Vedomosti",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role="admin",
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"bosh_balans_vedomosti_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/nakladnoylar")
+@role_required(["admin", "omborchi", "sotuvchi"])
+def export_excel_nakladnoylar():
+    """Ombor nakladnoylari ro'yxatini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "sotuvchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+    status_filter = request.args.get("status", "").strip()
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT o.*, 
+               COALESCE((SELECT SUM(quantity) FROM order_items WHERE order_id = o.id), 0.0) as total_sqm,
+               COALESCE((SELECT GROUP_CONCAT(p.brand || ' ' || p.model_name || ' (' || oi.quantity || ' m²)', '; ')
+                         FROM order_items oi JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id), '') as items_desc
+        FROM orders o
+        WHERE 1=1
+    """
+    params = []
+    if user_role == "sotuvchi":
+        query += " AND o.seller_name = ?"
+        params.append(user_name)
+    if status_filter:
+        query += " AND o.status = ?"
+        params.append(status_filter)
+
+    query += " ORDER BY o.id DESC"
+    cursor.execute(query, params)
+    orders = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    if user_role == "omborchi":
+        headers = [
+            "№", "Nakladnoy №", "Sana", "Xaridor Ismi", "Telefon",
+            "Sotuvchi", "Tovar Spiskasi", "Jami Hajm (m²)",
+            "Status", "Topshirdi", "Topshirilgan Vaqt", "Ombor Izohi"
+        ]
+        col_formats = {
+            0: "int", 1: "center", 2: "center", 3: "left", 4: "left",
+            5: "left", 6: "left", 7: "sqm", 8: "center", 9: "left", 10: "center", 11: "left"
+        }
+        rows = []
+        for idx, o in enumerate(orders, 1):
+            st = "Topshirilgan" if o.get("status") == "yuk_berildi" else "Chiqarilishi kerak"
+            rows.append([
+                idx, o.get("order_number"), o.get("created_at"), o.get("customer_name") or "-",
+                o.get("customer_phone") or "-", o.get("seller_name") or "-",
+                o.get("items_desc") or "-", o.get("total_sqm") or 0.0,
+                st, o.get("dispatched_by") or "-", o.get("dispatched_at") or "-",
+                o.get("warehouse_note") or "-"
+            ])
+    else:
+        headers = [
+            "№", "Nakladnoy №", "Sana", "Xaridor Ismi", "Telefon",
+            "Sotuvchi", "To'lov Usuli", "Tovar Spiskasi", "Jami Hajm (m²)",
+            "Jami Summa", "Status", "Topshirdi", "Topshirilgan Vaqt"
+        ]
+        col_formats = {
+            0: "int", 1: "center", 2: "center", 3: "left", 4: "left",
+            5: "left", 6: "center", 7: "left", 8: "sqm", 9: "currency",
+            10: "center", 11: "left", 12: "center"
+        }
+        rows = []
+        for idx, o in enumerate(orders, 1):
+            st = "Topshirilgan" if o.get("status") == "yuk_berildi" else "Chiqarilishi kerak"
+            rows.append([
+                idx, o.get("order_number"), o.get("created_at"), o.get("customer_name") or "-",
+                o.get("customer_phone") or "-", o.get("seller_name") or "-",
+                (o.get("payment_method") or "naqd").capitalize(),
+                o.get("items_desc") or "-", o.get("total_sqm") or 0.0,
+                o.get("total_amount") or 0.0, st,
+                o.get("dispatched_by") or "-", o.get("dispatched_at") or "-"
+            ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Nakladnoylar",
+        report_title="Ombor Nakladnoylari (Yuk Xatlari) Reyestri",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"nakladnoylar_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/mijozlar")
+@role_required(["admin", "sotuvchi"])
+def export_excel_mijozlar():
+    """Mijozlar bazasi va nasiya qarzlar daftarini Excel (.xlsx) ga yuklash"""
+    user_role = session.get("role", "sotuvchi")
+    user_name = session.get("full_name") or session.get("username", "Xodim")
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.id, c.full_name, c.phone, c.customer_type, c.balance_debt, c.notes, c.created_at,
+               COUNT(o.id) as orders_count,
+               COALESCE(SUM(o.total_amount), 0.0) as total_spent
+        FROM customers c
+        LEFT JOIN orders o ON o.customer_id = c.id
+        GROUP BY c.id
+        ORDER BY c.id DESC
+    """)
+    customers = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    headers = [
+        "№", "Mijoz ID", "Ism / Tashkilot", "Telefon", "Mijoz Turi",
+        "Xaridlar Soni", "Jami Xarid Summasi", "Hozirgi Nasiya / Qarz",
+        "Qayd Sanasi", "Izoh"
+    ]
+    col_formats = {
+        0: "int", 1: "int", 2: "left", 3: "center", 4: "center",
+        5: "int", 6: "currency", 7: "currency", 8: "center", 9: "left"
+    }
+    rows = []
+    for idx, c in enumerate(customers, 1):
+        rows.append([
+            idx, c.get("id"), c.get("full_name"), c.get("phone") or "-",
+            (c.get("customer_type") or "xaridor").capitalize(),
+            c.get("orders_count") or 0, c.get("total_spent") or 0.0,
+            c.get("balance_debt") or 0.0, c.get("created_at"),
+            c.get("notes") or "-"
+        ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Mijozlar & Nasiya",
+        report_title="Mijozlar Bazasi va Nasiya Qarzlar Daftari",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role=user_role,
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"mijozlar_nasiya_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/xarajatlar")
+@role_required(["admin"])
+def export_excel_xarajatlar():
+    """Do'kon operatsion xarajatlari jurnalini Excel (.xlsx) ga yuklash (Faqat Admin)"""
+    user_name = session.get("full_name") or session.get("username", "Admin")
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM expenses ORDER BY expense_date DESC, id DESC")
+    expenses = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    headers = [
+        "№", "ID", "Xarajat Sanasi", "Kategoriya", "Summa", 
+        "To'lov Usuli", "Izoh / Tavsif", "Kiritgan Xodim"
+    ]
+    col_formats = {
+        0: "int", 1: "int", 2: "center", 3: "left", 4: "currency",
+        5: "center", 6: "left", 7: "left"
+    }
+    rows = []
+    for idx, e in enumerate(expenses, 1):
+        rows.append([
+            idx, e.get("id"), e.get("expense_date") or e.get("created_at"),
+            e.get("category"), e.get("amount") or 0.0,
+            (e.get("payment_method") or "naqd").capitalize(),
+            e.get("description") or "-", e.get("recorded_by") or "-"
+        ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Xarajatlar",
+        report_title="Do'kon Operatsion Xarajatlari & Chiqimlar Jurnali",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role="admin",
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"dokon_xarajatlari_{date_str}.xlsx"
+    )
+
+@app.route("/export/excel/ustalar")
+@role_required(["admin"])
+def export_excel_ustalar():
+    """Hamkor ustalar va prorablar ro'yxatini Excel (.xlsx) ga yuklash (Faqat Admin)"""
+    user_name = session.get("full_name") or session.get("username", "Admin")
+
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.id, c.full_name, c.phone, c.customer_type, c.notes, c.created_at,
+               COUNT(DISTINCT o.id) as orders_count,
+               COALESCE(SUM(o.total_amount), 0.0) as total_sales,
+               COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o2 ON oi.order_id = o2.id WHERE o2.usta_id = c.id), 0.0) as total_sqm
+        FROM customers c
+        LEFT JOIN orders o ON o.usta_id = c.id
+        WHERE c.customer_type IN ('usta', 'prorab')
+        GROUP BY c.id
+        ORDER BY c.id DESC
+    """)
+    ustalar = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    headers = [
+        "№", "ID", "Usta / Prorab Ismi", "Telefon", "Mutaxassislik / Turi",
+        "Savdolar Soni", "Keltirgan Savdosi (m²)", "Keltirgan Tushumi",
+        "Qayd Sanasi", "Izoh"
+    ]
+    col_formats = {
+        0: "int", 1: "int", 2: "left", 3: "center", 4: "center",
+        5: "int", 6: "sqm", 7: "currency", 8: "center", 9: "left"
+    }
+    rows = []
+    for idx, u in enumerate(ustalar, 1):
+        rows.append([
+            idx, u.get("id"), u.get("full_name"), u.get("phone") or "-",
+            (u.get("customer_type") or "usta").upper(),
+            u.get("orders_count") or 0, u.get("total_sqm") or 0.0,
+            u.get("total_sales") or 0.0, u.get("created_at"),
+            u.get("notes") or "-"
+        ])
+
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    excel_buf = excel_utils.create_styled_excel(
+        sheet_title="Ustalar & Prorablar",
+        report_title="Do'kon Hamkor Ustalar va Prorablar Ro'yxati",
+        headers=headers,
+        data_rows=rows,
+        user_name=user_name,
+        user_role="admin",
+        column_formats=col_formats
+    )
+    return send_file(
+        excel_buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"ustalar_prorablar_{date_str}.xlsx"
     )
 
 # Dasturni ishga tushirishda bazani tekshirish

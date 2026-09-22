@@ -481,6 +481,10 @@
                     </p>
                 </div>
                 <div class="flex items-center space-x-2">
+                    <a href="/export/excel/hisobot/umumiy" class="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 flex items-center space-x-1.5 shadow-xs transition" title="Bosh Balans Vedomostini Excelga (.xlsx) yuklash">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                        <span>Excelga yuklash</span>
+                    </a>
                     <span class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100 flex items-center space-x-1.5">
                         <i class="fa-solid fa-file-invoice-dollar"></i>
                         <span>Bosh Balans Vedomosti</span>
@@ -848,6 +852,10 @@
                     {% endif %}
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
+                    <a href="/export/excel/hisobot/savdolar{% if selected_seller and selected_seller != 'all' %}?seller={{ selected_seller }}{% endif %}" class="px-3.5 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 rounded-xl transition flex items-center space-x-1.5 shadow-xs" title="Savdolar hisobotini Excelga (.xlsx) yuklash">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                        <span>Excel</span>
+                    </a>
                     {% if current_user and current_user.role == 'admin' and sellers_list %}
                     <select id="sellerFilterSelect" onchange="filterOrdersBySeller(this.value)" class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500">
                         <option value="all" {% if selected_seller == 'all' %}selected{% endif %}>Barcha Sotuvchilar</option>
@@ -1185,8 +1193,12 @@
                         Yuklar qaysi vaqtda, qancha miqdorda va kim tomonidan ombor hisobiga kiritilganligi qaydlari
                     </p>
                 </div>
-                <div>
-                    <input type="text" id="inboundSearch" onkeyup="filterInboundTable()" placeholder="Kafel yoki xodim qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64">
+                <div class="flex items-center space-x-2">
+                    <a href="/export/excel/hisobot/kirim" class="px-3.5 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 rounded-xl transition flex items-center space-x-1.5 shadow-xs" title="Kirim tarixini Excelga (.xlsx) yuklash">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                        <span>Excel</span>
+                    </a>
+                    <input type="text" id="inboundSearch" onkeyup="filterInboundTable()" placeholder="Kafel yoki xodim qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 w-56 sm:w-64">
                 </div>
             </div>
 
@@ -1298,7 +1310,11 @@
                     </p>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <input type="text" id="balanceSearch" onkeyup="filterBalanceTable()" placeholder="Kafel yoki o'lcham qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64">
+                    <a href="/export/excel/hisobot/balans" class="px-3.5 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 rounded-xl transition flex items-center space-x-1.5 shadow-xs" title="Qoldiq va balans hisobotini Excelga (.xlsx) yuklash">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                        <span>Excel</span>
+                    </a>
+                    <input type="text" id="balanceSearch" onkeyup="filterBalanceTable()" placeholder="Kafel yoki o'lcham qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 w-56 sm:w-64">
                 </div>
             </div>
 
@@ -1404,7 +1420,11 @@
                     </p>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <input type="text" id="brandSearch" onkeyup="filterBrandsTable()" placeholder="Marka yoki zavod qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 w-64">
+                    <a href="/export/excel/hisobot/markalar" class="px-3.5 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 rounded-xl transition flex items-center space-x-1.5 shadow-xs" title="Markalar tahlilini Excelga (.xlsx) yuklash">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                        <span>Excel</span>
+                    </a>
+                    <input type="text" id="brandSearch" onkeyup="filterBrandsTable()" placeholder="Marka yoki zavod qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 w-56 sm:w-64">
                 </div>
             </div>
 
@@ -1581,7 +1601,11 @@
                     </p>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <input type="text" id="brokenSearch" onkeyup="filterBrokenTable()" placeholder="Kafel, sabab yoki mas'ul qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 w-64">
+                    <a href="/export/excel/hisobot/siniqlar" class="px-3.5 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 rounded-xl transition flex items-center space-x-1.5 shadow-xs" title="Siniq va brak kafellar hisobotini Excelga (.xlsx) yuklash">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                        <span>Excel</span>
+                    </a>
+                    <input type="text" id="brokenSearch" onkeyup="filterBrokenTable()" placeholder="Kafel, sabab yoki mas'ul qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 w-56 sm:w-64">
                 </div>
             </div>
 
@@ -1754,7 +1778,11 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
-                    <input type="text" id="logSearch" onkeyup="filterLogsTable()" placeholder="Amal, xodim yoki tavsif qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 w-64">
+                    <a href="/export/excel/hisobot/audit-log" class="px-3.5 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 rounded-xl transition flex items-center space-x-1.5 shadow-xs" title="Amallar audit logini Excelga (.xlsx) yuklash">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                        <span>Excel</span>
+                    </a>
+                    <input type="text" id="logSearch" onkeyup="filterLogsTable()" placeholder="Amal, xodim yoki tavsif qidirish..." class="px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 w-56 sm:w-64">
                 </div>
             </div>
 

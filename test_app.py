@@ -1189,6 +1189,78 @@ class TestCyberSecurityAndResponsiveness(unittest.TestCase):
         self.assertIn("Yetkazilgan Zarar", html_admin)
         self.assertIn("Tizimdagi Barcha Amallar Tarixi (To'liq Audit)", html_admin)
 
+    def test_excel_exports_all_endpoints(self):
+        """Barcha 12 ta alohida Excel eksport marshrutlari to'g'ri ishlashi va haqiqiy .xlsx fayl qaytarishi"""
+        import io
+        import openpyxl
+
+        # 1. Admin sifatida tizimga kirish
+        self.client.get("/logout")
+        self.client.post("/login", data={"username": "admin", "password": "admin123"}, follow_redirects=True)
+
+        endpoints = [
+            ("/export/excel/ombor", "Ombor Qoldiqlari"),
+            ("/export/excel/hisobot/savdolar", "Savdolar Hisoboti"),
+            ("/export/excel/hisobot/kirim", "Kirim Tarixi"),
+            ("/export/excel/hisobot/balans", "Qoldiq & Balans"),
+            ("/export/excel/hisobot/markalar", "Kafel Markalari"),
+            ("/export/excel/hisobot/siniqlar", "Siniq & Braklar"),
+            ("/export/excel/hisobot/audit-log", "Amallar Tarixi"),
+            ("/export/excel/hisobot/umumiy", "Bosh Balans"),
+            ("/export/excel/nakladnoylar", "Nakladnoylar"),
+            ("/export/excel/mijozlar", "Mijozlar & Nasiya"),
+            ("/export/excel/xarajatlar", "Xarajatlar"),
+            ("/export/excel/ustalar", "Ustalar & Prorablar")
+        ]
+
+        for url, expected_sheet_title in endpoints:
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200, f"{url} status 200 bo'lishi kerak")
+            self.assertTrue(
+                r.headers["Content-Type"].startswith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                f"{url} Content-Type Excel bo'lishi kerak, lekin {r.headers['Content-Type']} chiqdi"
+            )
+            
+            # Excel fayli haqiqiy ekanligini openpyxl orqali tekshirish
+            wb = openpyxl.load_workbook(io.BytesIO(r.data))
+            sheet = wb.active
+            self.assertEqual(sheet.cell(row=1, column=1).value, "KAFEL CENTER & SAVDO TIZIMI")
+            self.assertTrue(len(sheet.title) > 0)
+            # 5-qator sarlavhalar mavjudligini tekshirish
+            self.assertIsNotNone(sheet.cell(row=5, column=1).value)
+
+    def test_excel_exports_role_isolation(self):
+        """Excel eksportida rollar bo'yicha ruxsatlar va pul ko'rsatkichlarini yashirish (omborchi/sotuvchi)"""
+        import io
+        import openpyxl
+
+        # 1. Omborchi ko'rinishi: ombor qoldig'i Excelida narxlar bo'lmasligi kerak
+        self.client.get("/logout")
+        self.client.post("/login", data={"username": "omborchi", "password": "omborchi123"}, follow_redirects=True)
+
+        r_ombor = self.client.get("/export/excel/ombor")
+        self.assertEqual(r_ombor.status_code, 200)
+        wb_ombor = openpyxl.load_workbook(io.BytesIO(r_ombor.data))
+        ws_ombor = wb_ombor.active
+        header_vals_ombor = [ws_ombor.cell(row=5, column=c).value for c in range(1, ws_ombor.max_column + 1)]
+        self.assertNotIn("1 m² Narxi", header_vals_ombor)
+        self.assertNotIn("Zaxira Qiymati", header_vals_ombor)
+
+        # Omborchi umumiy moliyaviy balansga kira olmasligi kerak (redirect)
+        r_umumiy = self.client.get("/export/excel/hisobot/umumiy", follow_redirects=False)
+        self.assertEqual(r_umumiy.status_code, 302)
+
+        # 2. Sotuvchi ko'rinishi: sotuvchi ombor qoldig'ini eksport qila olmasligi kerak
+        self.client.get("/logout")
+        self.client.post("/login", data={"username": "sotuvchi", "password": "sotuvchi123"}, follow_redirects=True)
+
+        r_sotuv_ombor = self.client.get("/export/excel/ombor", follow_redirects=False)
+        self.assertEqual(r_sotuv_ombor.status_code, 302)
+
+        # Sotuvchi o'z savdolarini eksport qila oladi
+        r_sotuv_savdo = self.client.get("/export/excel/hisobot/savdolar")
+        self.assertEqual(r_sotuv_savdo.status_code, 200)
+
 if __name__ == "__main__":
     unittest.main()
 
