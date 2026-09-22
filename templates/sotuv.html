@@ -61,20 +61,16 @@ if (typeof Html5Qrcode === "undefined") {
                         </div>
                         <h2 class="font-bold text-slate-800 text-sm">Kameradan QR Kod Skanerlash</h2>
                     </div>
-                    <div class="flex items-center space-x-1.5 sm:space-x-2">
-                        <!-- Kamera tanlash (agar 2 tadan ko'p bo'lsa) -->
-                        <select id="cameraSelect" onchange="switchCamera(this.value)" class="hidden text-[11px] bg-slate-100 border border-slate-300 text-slate-700 font-semibold rounded-lg px-2 py-1.5 focus:outline-none max-w-[130px] truncate">
+                    <div class="flex items-center space-x-2">
+                        <!-- Kamera tanlash (PC Camera yoki boshqa) -->
+                        <select id="cameraSelect" onchange="switchCamera(this.value)" class="hidden text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold rounded-xl px-2.5 py-1.5 focus:outline-none max-w-[180px] truncate shadow-2xs">
                         </select>
 
-                        <!-- Fayl / Rasm orqali skanerlash (Barcha qurilmalar va brauzerlarda 100% ishlaydi) -->
+                        <!-- Yashirin fayl inputi (zarurat tug'ilsa) -->
                         <input type="file" id="qrFileInput" accept="image/*" capture="environment" class="hidden" onchange="scanQrFromImageFile(this)">
-                        <button type="button" onclick="document.getElementById('qrFileInput').click()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs" title="Suratga olib yoki rasmdan QR kodni o'qish">
-                            <i class="fa-solid fa-camera-retro text-xs"></i>
-                            <span class="hidden sm:inline">Rasm / Surat</span>
-                            <span class="sm:hidden">Rasm</span>
-                        </button>
 
-                        <button id="toggleScannerBtn" onclick="toggleCamera()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
+                        <!-- Asosiy Kamerani Yoqish tugmasi -->
+                        <button id="toggleScannerBtn" onclick="toggleCamera()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-black px-4 py-2 rounded-xl transition flex items-center space-x-2 shadow-sm">
                             <i class="fa-solid fa-video text-xs"></i>
                             <span id="scannerBtnText">Kamerani Yoqish</span>
                         </button>
@@ -82,7 +78,7 @@ if (typeof Html5Qrcode === "undefined") {
                 </div>
 
                 <!-- Video Viewport with Laser Beam & Corners -->
-                <div id="reader-container" class="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 min-h-[145px] flex items-center justify-center text-center p-3 transition-all duration-300">
+                <div id="reader-container" class="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 min-h-[160px] flex items-center justify-center text-center p-2 transition-all duration-300">
                     <!-- Dynamic Laser Line when scanning -->
                     <div id="laserLine" class="laser-line hidden"></div>
                     <!-- Corner Markers -->
@@ -93,22 +89,16 @@ if (typeof Html5Qrcode === "undefined") {
 
                     <div id="reader" class="w-full max-w-sm"></div>
                     
-                    <div id="cameraPlaceholder" class="text-slate-400 flex flex-col items-center py-2">
-                        <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sky-400 mb-2 shadow-inner">
-                            <i class="fa-solid fa-qrcode text-xl"></i>
+                    <div id="cameraPlaceholder" class="text-slate-400 flex flex-col items-center py-4 cursor-pointer" onclick="toggleCamera()">
+                        <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sky-400 mb-2.5 shadow-inner hover:scale-105 transition">
+                            <i class="fa-solid fa-camera text-2xl"></i>
                         </div>
-                        <p class="text-xs font-bold text-slate-200">Kamera o'chiq</p>
-                        <p class="text-[11px] text-slate-400 mt-0.5 max-w-xs leading-tight">Jonli skanerlash yoki suratga olib QR kodni bir zumda o'qish imkoniyati</p>
-                        <div class="mt-2.5 flex items-center gap-2">
-                            <button type="button" onclick="toggleCamera()" class="bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
-                                <i class="fa-solid fa-video text-xs"></i>
-                                <span>Jonli Kamera</span>
-                            </button>
-                            <button type="button" onclick="document.getElementById('qrFileInput').click()" class="bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-2xs">
-                                <i class="fa-solid fa-camera-retro text-xs"></i>
-                                <span>Suratga Olish / Rasm</span>
-                            </button>
-                        </div>
+                        <p class="text-sm font-black text-slate-100">Kamera Hozir O'chiq</p>
+                        <p class="text-xs text-slate-400 mt-1 max-w-xs leading-relaxed">Kafel stikeridagi QR kodni jonli video orqali bir zumda o'qish uchun bosing</p>
+                        <button type="button" onclick="toggleCamera(); event.stopPropagation();" class="mt-3 bg-sky-600 hover:bg-sky-500 text-white text-xs font-black px-5 py-2 rounded-xl transition flex items-center space-x-2 shadow-sm">
+                            <i class="fa-solid fa-video text-xs"></i>
+                            <span>Kamerani Yoqish &amp; Skanerlash</span>
+                        </button>
                     </div>
                 </div>
 
@@ -722,55 +712,6 @@ if (typeof Html5Qrcode === "undefined") {
     </div>
 </div>
 
-<!-- Kamera Ruxsat Berish Yo'riqnomasi Modali -->
-<div id="cameraPermissionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 text-center space-y-4 animate-in fade-in zoom-in duration-200">
-        <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-inner border border-amber-100">
-            <i class="fa-solid fa-video-slash"></i>
-        </div>
-        <div>
-            <h3 class="text-base sm:text-lg font-black text-slate-900">Brauzerda Kameraga Ruxsat Berilmagan</h3>
-            <p class="text-xs text-slate-500 mt-1">
-                Kamerani yoqish uchun brauzeringizga bir martalik ruxsat berish lozim:
-            </p>
-        </div>
-        
-        <div class="bg-slate-50 rounded-2xl p-4 text-left text-xs space-y-3 border border-slate-200/80 text-slate-700">
-            <div class="flex items-start space-x-2.5">
-                <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-700 font-black flex items-center justify-center flex-shrink-0 text-xs shadow-2xs">1</span>
-                <div>
-                    <span class="font-bold text-slate-800">Manzil qatoridagi belgini bosing:</span>
-                    <p class="text-[11px] text-slate-500 mt-0.5">Brauzerning tepadagi <code class="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono text-sky-600 font-bold">127.0.0.1:5000</code> yozuvi oldidagi <b>🔒 Qulf</b> yoki <b>Sozlamalar (Настройки)</b> belgisini bosing.</p>
-                </div>
-            </div>
-            <div class="flex items-start space-x-2.5">
-                <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-700 font-black flex items-center justify-center flex-shrink-0 text-xs shadow-2xs">2</span>
-                <div>
-                    <span class="font-bold text-slate-800">Kamerani "Разрешить" (Allow) qiling:</span>
-                    <p class="text-[11px] text-slate-500 mt-0.5">Ochilgan oynada <b>Камера (Camera)</b> qatoriga <b>"Разрешить" (Ruxsat berish)</b> belgisini qo'ying.</p>
-                </div>
-            </div>
-            <div class="flex items-start space-x-2.5">
-                <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-700 font-black flex items-center justify-center flex-shrink-0 text-xs shadow-2xs">3</span>
-                <div>
-                    <span class="font-bold text-slate-800">Qayta tekshiring:</span>
-                    <p class="text-[11px] text-slate-500 mt-0.5">Pastdagi <b>"Qayta Yoqish"</b> tugmasini bosing yoki sahifani yangilang (`F5`).</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="pt-1 flex items-center justify-between gap-2">
-            <button type="button" onclick="closeCameraPermissionModal(); document.getElementById('qrFileInput').click();" class="flex-1 py-2.5 px-3 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 font-bold text-xs border border-amber-200 transition flex items-center justify-center space-x-1.5">
-                <i class="fa-solid fa-camera-retro text-xs"></i>
-                <span>Rasm / Surat orqali</span>
-            </button>
-            <button type="button" onclick="closeCameraPermissionModal(); toggleCamera();" class="flex-1 py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-xs transition flex items-center justify-center space-x-1.5">
-                <i class="fa-solid fa-rotate-right text-xs"></i>
-                <span>Qayta Yoqish</span>
-            </button>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
