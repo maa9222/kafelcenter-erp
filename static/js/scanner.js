@@ -278,8 +278,30 @@ async function toggleCamera() {
             container.classList.remove("min-h-[260px]");
             container.classList.add("min-h-[145px]");
         }
+        // Hide permission guide if visible
+        const permGuide = document.getElementById("cameraPermissionGuide");
+        if (permGuide) permGuide.classList.add("hidden");
         notify("Kamera o'chirildi", "info");
     } else {
+        // 1. Check permission status first (if Permissions API available)
+        let permissionStatus = null;
+        try {
+            if (navigator.permissions && navigator.permissions.query) {
+                const result = await navigator.permissions.query({ name: "camera" });
+                permissionStatus = result.state; // "granted", "denied", or "prompt"
+                console.log("Kamera ruxsati holati:", permissionStatus);
+            }
+        } catch (permErr) {
+            // Some browsers don't support camera permission query
+            console.log("Permissions API kamera uchun qo'llab-quvvatlanmaydi:", permErr);
+        }
+
+        // 2. If definitely denied, show inline guide without even trying
+        if (permissionStatus === "denied") {
+            showPermissionDeniedGuide();
+            return;
+        }
+
         try {
             if (placeholder) placeholder.classList.add("hidden");
             if (laserLine) laserLine.classList.remove("hidden");
@@ -287,6 +309,10 @@ async function toggleCamera() {
                 container.classList.remove("min-h-[145px]");
                 container.classList.add("min-h-[260px]");
             }
+
+            // Hide permission guide if it was shown before
+            const permGuide = document.getElementById("cameraPermissionGuide");
+            if (permGuide) permGuide.classList.add("hidden");
 
             await startCameraStream();
             isScannerRunning = true;
@@ -320,10 +346,11 @@ async function toggleCamera() {
 
             const errStr = (typeof err === "string" ? err : (err.message || err.name || String(err))).toLowerCase();
 
-            if (errStr.includes("notreadable") || errStr.includes("trackstart") || errStr.includes("could not start video source")) {
+            if (errStr.includes("notallowed") || errStr.includes("permission")) {
+                // User denied or browser auto-blocked — show inline guide
+                showPermissionDeniedGuide();
+            } else if (errStr.includes("notreadable") || errStr.includes("trackstart") || errStr.includes("could not start video source")) {
                 notify("⚠️ Kamera band! Agar brauzer yuqorisida kamera oynasi (preview) ochiq bo'lsa, uni yopib qayta bosing.", "warning");
-            } else if (errStr.includes("notallowed") || errStr.includes("permission")) {
-                notify("⚠️ Kameraga brauzer ruxsati berilmadi! Brauzer manzilidagi qulf belgisidan ruxsat bering.", "danger");
             } else if (errStr.includes("overconstrained")) {
                 notify("⚠️ Kamera o'lchamlari mos kelmadi. Boshqa kamerani tanlang.", "warning");
             } else if (errStr.includes("notfound") || errStr.includes("devices_not_supported")) {
@@ -333,6 +360,65 @@ async function toggleCamera() {
             }
         }
     }
+}
+
+// Show inline permission denied guide inside the camera viewport
+function showPermissionDeniedGuide() {
+    const placeholder = document.getElementById("cameraPlaceholder");
+    if (placeholder) placeholder.classList.add("hidden");
+
+    let guide = document.getElementById("cameraPermissionGuide");
+    if (!guide) {
+        guide = document.createElement("div");
+        guide.id = "cameraPermissionGuide";
+        guide.className = "flex flex-col items-center py-5 px-4 text-center space-y-3";
+        const container = document.getElementById("reader-container");
+        if (container) container.appendChild(guide);
+    }
+
+    guide.innerHTML = `
+        <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mb-1">
+            <i class="fa-solid fa-video-slash text-2xl"></i>
+        </div>
+        <p class="text-sm font-black text-white">Kameraga Ruxsat Bloklangan!</p>
+        <p class="text-xs text-slate-300 max-w-xs leading-relaxed">
+            Brauzer kameraga kirishni bloklagan. Ruxsat berish uchun quyidagi amallarni bajaring:
+        </p>
+        <div class="text-left bg-slate-900/80 rounded-xl p-3.5 border border-slate-700 max-w-xs w-full space-y-2">
+            <div class="flex items-start space-x-2.5">
+                <span class="bg-sky-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                <p class="text-[11px] text-slate-200">Brauzer manzil satrining <strong class="text-sky-400">chap tomonidagi</strong> qulf <i class="fa-solid fa-lock text-[10px] text-sky-400"></i> yoki kamera <i class="fa-solid fa-video text-[10px] text-sky-400"></i> belgisini bosing</p>
+            </div>
+            <div class="flex items-start space-x-2.5">
+                <span class="bg-sky-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                <p class="text-[11px] text-slate-200"><strong class="text-emerald-400">Kamera → Ruxsat berish (Allow)</strong> deb o'zgartiring</p>
+            </div>
+            <div class="flex items-start space-x-2.5">
+                <span class="bg-sky-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                <p class="text-[11px] text-slate-200">Sahifani <strong class="text-amber-400">qayta yuklang</strong> (Ctrl+R yoki F5)</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+            <button type="button" onclick="window.location.reload()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-black px-4 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+                <i class="fa-solid fa-rotate-right text-[10px]"></i>
+                <span>Sahifani Qayta Yuklash</span>
+            </button>
+            <button type="button" onclick="retryAfterPermissionReset()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+                <i class="fa-solid fa-camera text-[10px]"></i>
+                <span>Qayta Urinish</span>
+            </button>
+        </div>
+    `;
+    guide.classList.remove("hidden");
+}
+
+// Retry camera after user resets permissions
+async function retryAfterPermissionReset() {
+    const guide = document.getElementById("cameraPermissionGuide");
+    if (guide) guide.classList.add("hidden");
+    const placeholder = document.getElementById("cameraPlaceholder");
+    if (placeholder) placeholder.classList.remove("hidden");
+    await toggleCamera();
 }
 
 // Switch Camera on the fly
@@ -466,7 +552,7 @@ function searchByManualCode() {
     lookupProduct(code);
 }
 
-// Enter key press in manual input and Auto-load camera list on page load
+// Enter key press in manual input
 document.addEventListener("DOMContentLoaded", () => {
     const manualInput = document.getElementById("manualCodeInput");
     if (manualInput) {
@@ -478,16 +564,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Pre-query cameras if Html5Qrcode is available
-    if (typeof Html5Qrcode !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-        Html5Qrcode.getCameras().then(cameras => {
-            if (cameras && cameras.length > 0) {
-                const prioritized = prioritizeCameras(cameras);
-                availableCameras = prioritized;
-                updateCameraSelectDropdown(prioritized);
-            }
-        }).catch(err => {
-            console.log("Kamerani oldindan aniqlashda:", err);
-        });
-    }
+    // NOTE: Do NOT auto-call getCameras() here!
+    // It triggers a permission prompt immediately on page load.
+    // If user clicks "Block", all future camera requests will be auto-denied.
+    // Cameras are queried only when user explicitly clicks "Kamerani Yoqish".
 });
