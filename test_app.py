@@ -978,6 +978,7 @@ class TestCyberSecurityAndResponsiveness(unittest.TestCase):
         self.assertEqual(r.headers.get("X-XSS-Protection"), "1; mode=block")
         self.assertEqual(r.headers.get("Referrer-Policy"), "strict-origin-when-cross-origin")
         self.assertIn("geolocation=()", r.headers.get("Permissions-Policy", ""))
+        self.assertIn("camera=(self)", r.headers.get("Permissions-Policy", ""))
 
         # Authenticated user should have Cache-Control: no-store
         self.client.post("/login", data={"username": "admin", "password": "admin123"}, follow_redirects=True)
