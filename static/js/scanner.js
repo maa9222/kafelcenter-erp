@@ -4,6 +4,9 @@ let isScannerRunning = false;
 let availableCameras = [];
 let currentCameraId = null;
 let currentScannedProduct = null;
+let lastScannedCode = null;
+let lastScanTime = 0;
+const SCAN_COOLDOWN_MS = 2500; // 2.5 soniya ichida bir xil QR kodni qayta o'qib bezovta qilmaslik
 
 // Safe Toast notification caller
 function notify(msg, type = 'info') {
@@ -281,7 +284,6 @@ async function toggleCamera() {
         // Hide permission guide if visible
         const permGuide = document.getElementById("cameraPermissionGuide");
         if (permGuide) permGuide.classList.add("hidden");
-        notify("Kamera o'chirildi", "info");
     } else {
         // 1. Check permission status first (if Permissions API available)
         let permissionStatus = null;
@@ -321,7 +323,6 @@ async function toggleCamera() {
                 btn.classList.replace("bg-sky-600", "bg-rose-600");
                 btn.classList.replace("hover:bg-sky-500", "hover:bg-rose-500");
             }
-            notify("Kamera yoqildi. Kafel QR kodini kameraga yaqinlashtiring", "success");
         } catch (err) {
             console.error("Kamerani ochishda xato:", err);
             
@@ -428,7 +429,6 @@ async function switchCamera(selectedCameraId) {
     if (isScannerRunning) {
         try {
             await startCameraStream();
-            notify("Kamera almashtirildi", "info");
         } catch (e) {
             console.error("Kamerani almashtirishda xato:", e);
             notify("Kamerani almashtirib bo'lmadi", "warning");
@@ -442,7 +442,6 @@ async function scanQrFromImageFile(input) {
     const file = input.files[0];
 
     try {
-        notify("QR kod tahlil qilinmoqda...", "info");
         if (!html5QrCode) {
             html5QrCode = new Html5Qrcode("reader");
         }
@@ -462,8 +461,19 @@ async function scanQrFromImageFile(input) {
 }
 
 function onScanSuccess(decodedText, decodedResult) {
+    const now = Date.now();
+    const cleanCode = (decodedText || "").trim();
+    if (!cleanCode) return;
+
+    // Bir xil QR kodni 2.5 soniya ichida takroran o'qib bezovta qilmaslik
+    if (cleanCode === lastScannedCode && (now - lastScanTime) < SCAN_COOLDOWN_MS) {
+        return;
+    }
+    lastScannedCode = cleanCode;
+    lastScanTime = now;
+
     playScanSound();
-    lookupProduct(decodedText);
+    lookupProduct(cleanCode);
 }
 
 function onScanFailure(error) {
@@ -481,7 +491,7 @@ async function lookupProduct(code) {
         
         if (data.success && data.product) {
             displayScannedProduct(data.product);
-            notify(`✅ ${data.product.brand} - ${data.product.model_name} aniqlandi!`, 'success');
+            // Mahsulot kartasi ekranda paydo bo'ladi va ovoz chalinadi - ekranni to'suvchi ortiqcha toast chiqarilmaydi
         } else {
             notify(data.message || "Ushbu QR kodli kafel topilmadi!", 'warning');
         }

@@ -977,12 +977,12 @@ async function viewUstaDetails(ustaId) {
         const data = await res.json();
         if (data.success) {
             document.getElementById('modalUstaName').innerText = data.usta.full_name;
-            document.getElementById('modalUstaPhone').innerText = data.usta.phone || 'Telefon raqam yo'q';
+            document.getElementById('modalUstaPhone').innerText = data.usta.phone || "Telefon raqam yo'q";
             document.getElementById('modalClientsCount').innerText = data.summary.clients_count + ' nafar';
             document.getElementById('modalTotalRevenue').innerText = Number(data.summary.total_revenue).toLocaleString('ru-RU') + ' s.';
             document.getElementById('modalTotalSqm').innerText = Number(data.summary.total_sqm).toFixed(1) + ' m²';
             document.getElementById('modalOrdersCount').innerText = data.summary.orders_count + ' ta';
-            document.getElementById('modalPeriodBadge').innerText = '{{ period_title }}';
+            document.getElementById('modalPeriodBadge').innerText = {{ period_title|tojson }};
 
             const tbody = document.getElementById('modalOrdersTableBody');
             if (data.orders.length === 0) {
@@ -1020,7 +1020,7 @@ async function viewUstaDetails(ustaId) {
             alert('Xatolik: ' + data.message);
         }
     } catch (e) {
-        alert('Ma'lumotlarni yuklab bo'lmadi!');
+        alert("Ma'lumotlarni yuklab bo'lmadi!");
     }
 }
 
@@ -1056,7 +1056,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         yAxisID: 'y'
                     },
                     {
-                        label: 'Savdo Tushumi (so'm)',
+                        label: "Savdo Tushumi (so'm)",
                         data: ustaRevenues,
                         backgroundColor: 'rgba(16, 185, 129, 0.85)',
                         borderColor: '#059669',
@@ -1134,7 +1134,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Sotuv Tushumi (so'm)',
+                        label: "Sotuv Tushumi (so'm)",
                         data: revenues,
                         backgroundColor: 'rgba(2, 132, 199, 0.85)',
                         borderRadius: 8,

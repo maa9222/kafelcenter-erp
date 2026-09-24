@@ -561,6 +561,17 @@
             const container = document.getElementById('toastContainer');
             if (!container) return;
 
+            // Agar ayni shu xabar hozir ko'rinib turgan bo'lsa, takroran qo'shmaymiz
+            const existing = Array.from(container.children);
+            if (existing.some(el => el.textContent.includes(message))) {
+                return;
+            }
+
+            // Ekranda bir vaqtning o'zida ko'pi bilan 2 ta toast tursin (ekranni to'sib qo'ymasligi uchun)
+            while (container.children.length >= 2) {
+                container.removeChild(container.firstChild);
+            }
+
             const icons = {
                 success: 'fa-circle-check text-emerald-400',
                 danger: 'fa-circle-xmark text-rose-400',
@@ -581,7 +592,7 @@
             setTimeout(() => {
                 toast.classList.add('toast-fadeOut');
                 setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            }, 3000);
         }
 
         // Global Modern Confirmation Modal Helper (Replaces window.confirm)
