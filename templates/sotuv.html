@@ -63,8 +63,14 @@ if (typeof Html5Qrcode === "undefined") {
                     </div>
                     <div class="flex items-center space-x-2">
                         <!-- Kamera tanlash (PC Camera yoki boshqa) -->
-                        <select id="cameraSelect" onchange="switchCamera(this.value)" class="hidden text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold rounded-xl px-2.5 py-1.5 focus:outline-none max-w-[180px] truncate shadow-2xs">
+                        <select id="cameraSelect" onchange="onUserSelectCamera(this.value)" class="hidden text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold rounded-xl px-2.5 py-1.5 focus:outline-none max-w-[170px] truncate shadow-2xs">
                         </select>
+
+                        <!-- Kamerani almashtirish (Orqa / Oldi / Flip) tugmasi -->
+                        <button type="button" id="flipCameraBtn" onclick="flipCamera()" title="Kamerani almashtirish (Orqa / Oldi)" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-2.5 py-2 rounded-xl transition flex items-center space-x-1 border border-slate-300 shadow-2xs">
+                            <i class="fa-solid fa-camera-rotate text-xs text-sky-600"></i>
+                            <span class="hidden sm:inline">Almashtirish</span>
+                        </button>
 
                         <!-- Yashirin fayl inputi (zarurat tug'ilsa) -->
                         <input type="file" id="qrFileInput" accept="image/*" capture="environment" class="hidden" onchange="scanQrFromImageFile(this)">

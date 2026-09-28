@@ -7,6 +7,8 @@ let currentScannedProduct = null;
 let lastScannedCode = null;
 let lastScanTime = 0;
 const SCAN_COOLDOWN_MS = 2500; // 2.5 soniya ichida bir xil QR kodni qayta o'qib bezovta qilmaslik
+let hasUserManuallyChosenCamera = false;
+let currentFacingMode = "environment"; // Har doim orqa kamera asosiy bo'lsin
 
 // Safe Toast notification caller
 function notify(msg, type = 'info') {
@@ -36,20 +38,32 @@ function playScanSound() {
     }
 }
 
-// Function to sort and prioritize cameras (puts PC Camera and Webcams first, skips printers/scanners)
+// Function to sort and prioritize cameras (puts Back Camera and Webcams first, front camera last, skips printers/scanners)
 function prioritizeCameras(cameras) {
     if (!cameras || !cameras.length) return [];
     return [...cameras].sort((a, b) => {
         const labelA = (a.label || "").toLowerCase();
         const labelB = (b.label || "").toLowerCase();
 
-        // Deprioritize non-cameras like Epson printer/scanner
+        // 1. Deprioritize non-cameras like Epson printer/scanner
         const isBadA = /epson|scanner|printer|virtual|fax/i.test(labelA);
         const isBadB = /epson|scanner|printer|virtual|fax/i.test(labelB);
         if (isBadA && !isBadB) return 1;
         if (!isBadA && isBadB) return -1;
 
-        // Prioritize real webcams and USB cameras
+        // 2. ORQA (BACK / REAR / ENVIRONMENT) KAMERA ENG BIRINCHI O'RINGA!
+        const isBackA = /back|rear|environment|orqa|main|primary|wide|facing\s*back/i.test(labelA);
+        const isBackB = /back|rear|environment|orqa|main|primary|wide|facing\s*back/i.test(labelB);
+        if (isBackA && !isBackB) return -1;
+        if (!isBackA && isBackB) return 1;
+
+        // 3. OLDI (FRONT / USER / SELFIE) KAMERANI ENG OXIRGI O'RINGA SURISH!
+        const isFrontA = /front|user|selfie|oldi|face|facing\s*front/i.test(labelA);
+        const isFrontB = /front|user|selfie|oldi|face|facing\s*front/i.test(labelB);
+        if (isFrontA && !isFrontB) return 1;
+        if (!isFrontA && isFrontB) return -1;
+
+        // 4. Prioritize real webcams and USB cameras
         const isGoodA = /pc camera|webcam|camera|058f|usb|video/i.test(labelA);
         const isGoodB = /pc camera|webcam|camera|058f|usb|video/i.test(labelB);
         if (isGoodA && !isGoodB) return -1;
@@ -59,50 +73,69 @@ function prioritizeCameras(cameras) {
     });
 }
 
-// Populate Camera Selector Dropdown
+// Populate Camera Selector Dropdown & Flip Button
 function updateCameraSelectDropdown(cameras) {
     const select = document.getElementById("cameraSelect");
-    if (!select) return;
+    const flipBtn = document.getElementById("flipCameraBtn");
 
     if (!cameras || cameras.length === 0) {
-        select.classList.add("hidden");
+        if (select) select.classList.add("hidden");
+        if (flipBtn) flipBtn.classList.add("hidden");
         return;
     }
 
-    select.innerHTML = "";
     // Filter out obvious printers/scanners if real webcams exist
     const nonScanners = cameras.filter(c => !/epson|scanner|printer|fax|virtual/i.test(c.label || ""));
     const displayList = nonScanners.length > 0 ? nonScanners : cameras;
 
-    displayList.forEach((cam, idx) => {
-        const opt = document.createElement("option");
-        opt.value = cam.id;
-        let label = cam.label || `Kamera ${idx + 1}`;
-        if (/epson|scanner|printer/i.test(label)) {
-            label = `⚠️ ${label}`;
-        } else if (/pc camera|058f/i.test(label)) {
-            label = `📹 PC Camera (${cam.label || 'USB'})`;
-        } else if (/back|rear|environment|orqa/i.test(label)) {
-            label = `📷 Orqa Kamera`;
-        } else if (/front|user|oldi|webcam/i.test(label)) {
-            label = `🤳 Web Kamera`;
-        }
-        opt.text = label;
-        if (currentCameraId === cam.id) {
-            opt.selected = true;
-        }
-        select.appendChild(opt);
-    });
+    if (select) {
+        select.innerHTML = "";
+        displayList.forEach((cam, idx) => {
+            const opt = document.createElement("option");
+            opt.value = cam.id;
+            let label = cam.label || `Kamera ${idx + 1}`;
+            if (/epson|scanner|printer/i.test(label)) {
+                label = `⚠️ ${label}`;
+            } else if (/back|rear|environment|orqa|facing\s*back/i.test(label)) {
+                label = `📷 Orqa Kamera (Asosiy)`;
+            } else if (/front|user|selfie|oldi|facing\s*front/i.test(label)) {
+                label = `🤳 Oldi Kamera`;
+            } else if (/pc camera|058f/i.test(label)) {
+                label = `📹 PC Camera (${cam.label || 'USB'})`;
+            } else if (/webcam|video/i.test(label)) {
+                label = `📹 Web Kamera`;
+            }
+            opt.text = label;
+            if (currentCameraId === cam.id) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        });
 
-    if (!currentCameraId && displayList.length > 0) {
-        currentCameraId = displayList[0].id;
-        select.value = currentCameraId;
+        // Set default camera: always pick the back camera if user hasn't explicitly chosen
+        if (!hasUserManuallyChosenCamera) {
+            const backCam = displayList.find(c => /back|rear|environment|orqa|facing\s*back/i.test(c.label || ""));
+            if (backCam) {
+                currentCameraId = backCam.id;
+            } else if (displayList.length > 0) {
+                currentCameraId = displayList[0].id;
+            }
+            select.value = currentCameraId;
+        }
+
+        if (displayList.length > 1) {
+            select.classList.remove("hidden");
+        } else {
+            select.classList.add("hidden");
+        }
     }
 
-    if (displayList.length > 1) {
-        select.classList.remove("hidden");
-    } else {
-        select.classList.add("hidden");
+    if (flipBtn) {
+        if (displayList.length > 1) {
+            flipBtn.classList.remove("hidden");
+        } else {
+            flipBtn.classList.add("hidden");
+        }
     }
 }
 
@@ -122,6 +155,8 @@ async function startCameraStream() {
     const readerEl = document.getElementById("reader");
     if (readerEl) readerEl.innerHTML = "";
 
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.innerWidth <= 768 && navigator.maxTouchPoints > 0);
+
     // 1. Get available cameras
     let cameras = [];
     try {
@@ -131,11 +166,18 @@ async function startCameraStream() {
         // run a quick getUserMedia to trigger permissions and populate real device labels
         if (!rawCameras || rawCameras.length === 0 || !rawCameras.some(c => c.label)) {
             try {
-                const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // Request environment (back) camera during permission check!
+                const tempStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "environment" } }
+                });
                 tempStream.getTracks().forEach(t => t.stop());
                 rawCameras = await Html5Qrcode.getCameras();
             } catch (permErr) {
-                console.warn("Initial getUserMedia test error:", permErr);
+                try {
+                    const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    tempStream.getTracks().forEach(t => t.stop());
+                    rawCameras = await Html5Qrcode.getCameras();
+                } catch (_) {}
             }
         }
 
@@ -149,13 +191,13 @@ async function startCameraStream() {
     }
 
     const scanConfig = {
-        fps: 10,
+        fps: 12,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
             if (!viewfinderWidth || !viewfinderHeight || viewfinderWidth <= 0 || viewfinderHeight <= 0) {
                 return { width: 220, height: 220 };
             }
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const size = Math.max(120, Math.min(Math.floor(minEdge * 0.72), 240));
+            const size = Math.max(140, Math.min(Math.floor(minEdge * 0.72), 260));
             return { width: size, height: size };
         }
     };
@@ -179,8 +221,38 @@ async function startCameraStream() {
     const validCameras = cameras.filter(c => !/epson|scanner|printer|fax|virtual/i.test(c.label || ""));
     const cameraList = validCameras.length > 0 ? validCameras : cameras;
 
-    // 2. Try starting with selected or prioritized cameras
-    if (currentCameraId) {
+    // 2. Mobil telefonlar uchun: agar foydalanuvchi o'zi oldi kamerani tanlamagan bo'lsa,
+    // birinchi navbatda ORQA (environment) kamerani ishga tushiramiz!
+    if (isMobile && !hasUserManuallyChosenCamera) {
+        const backCam = cameraList.find(c => /back|rear|environment|orqa|facing\s*back/i.test(c.label || ""));
+        if (backCam) {
+            try {
+                console.log("Mobil: aniqlangan orqa kamera ID bilan ochilmoqda:", backCam.label, backCam.id);
+                await tryStart(backCam.id);
+                currentCameraId = backCam.id;
+                const select = document.getElementById("cameraSelect");
+                if (select) select.value = backCam.id;
+                started = true;
+            } catch (e) {
+                console.warn("backCam.id bilan ochilmadi:", e);
+                lastErr = e;
+            }
+        }
+        
+        if (!started) {
+            try {
+                console.log("Mobil: facingMode: environment bilan orqa kamera ochilmoqda...");
+                await tryStart({ facingMode: "environment" });
+                started = true;
+            } catch (e) {
+                console.warn("facingMode: environment ochilmadi:", e);
+                lastErr = e;
+            }
+        }
+    }
+
+    // 3. Tanlangan yoki tartiblangan birinchi kamera bilan ochish
+    if (!started && currentCameraId) {
         try {
             console.log("Tanlangan kamera ishga tushirilmoqda:", currentCameraId);
             await tryStart(currentCameraId);
@@ -191,6 +263,7 @@ async function startCameraStream() {
         }
     }
 
+    // 4. Ro'yxatdagi kameralarni navbatma-navbat sinash (orqa kameralar boshida turadi)
     if (!started && cameraList && cameraList.length > 0) {
         for (const cam of cameraList) {
             if (cam.id === currentCameraId) continue;
@@ -209,10 +282,22 @@ async function startCameraStream() {
         }
     }
 
-    // 3. Fallback: Generic constraints object (no ID, requests standard USB PC Camera)
+    // 5. Fallback 1: facingMode environment (Orqa kamera)
     if (!started) {
         try {
-            console.log("Fallback: generic constraints {} bilan urinilmoqda...");
+            console.log("Fallback 1: facingMode environment bilan urinilmoqda...");
+            await tryStart({ facingMode: "environment" });
+            started = true;
+        } catch (e) {
+            console.warn("facingMode environment ishlamadi:", e);
+            lastErr = e;
+        }
+    }
+
+    // 6. Fallback 2: Generic constraints {} (standart USB kamera)
+    if (!started) {
+        try {
+            console.log("Fallback 2: generic constraints {} bilan urinilmoqda...");
             await tryStart({});
             started = true;
         } catch (e) {
@@ -221,26 +306,14 @@ async function startCameraStream() {
         }
     }
 
-    // 4. Fallback: try user facing camera
+    // 7. Fallback 3: facingMode user (Oldi kamera - faqat boshqa hech qaysi kamera ishlamasa)
     if (!started) {
         try {
-            console.log("Fallback: facingMode user bilan urinilmoqda...");
+            console.log("Fallback 3: facingMode user bilan urinilmoqda...");
             await tryStart({ facingMode: "user" });
             started = true;
         } catch (e) {
             console.warn("facingMode user ishlamadi:", e);
-            lastErr = e;
-        }
-    }
-
-    // 5. Fallback: try environment facing camera
-    if (!started) {
-        try {
-            console.log("Fallback: facingMode environment bilan urinilmoqda...");
-            await tryStart({ facingMode: "environment" });
-            started = true;
-        } catch (e) {
-            console.warn("facingMode environment ishlamadi:", e);
             lastErr = e;
         }
     }
@@ -420,6 +493,64 @@ async function retryAfterPermissionReset() {
     const placeholder = document.getElementById("cameraPlaceholder");
     if (placeholder) placeholder.classList.remove("hidden");
     await toggleCamera();
+}
+
+// User explicitly picks a camera from the dropdown
+function onUserSelectCamera(cameraId) {
+    hasUserManuallyChosenCamera = true;
+    switchCamera(cameraId);
+}
+
+// Flip / Switch Camera (Orqa <-> Oldi kamera)
+async function flipCamera() {
+    hasUserManuallyChosenCamera = true;
+
+    // Filter valid cameras
+    const validCams = availableCameras.filter(c => !/epson|scanner|printer|fax|virtual/i.test(c.label || ""));
+    const list = validCams.length > 0 ? validCams : availableCameras;
+
+    if (!list || list.length < 2) {
+        // Agar aniq kameralar ro'yxati 2 ta bo'lmasa, facingMode ni toggle qilamiz
+        currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+        if (isScannerRunning) {
+            try {
+                if (html5QrCode) {
+                    try { await html5QrCode.stop(); } catch (_) {}
+                    try { html5QrCode.clear(); } catch (_) {}
+                    html5QrCode = null;
+                }
+                const scanConfig = {
+                    fps: 12,
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                        const minEdge = Math.min(viewfinderWidth || 220, viewfinderHeight || 220);
+                        const size = Math.max(140, Math.min(Math.floor(minEdge * 0.72), 260));
+                        return { width: size, height: size };
+                    }
+                };
+                html5QrCode = new Html5Qrcode("reader");
+                await html5QrCode.start({ facingMode: currentFacingMode }, scanConfig, onScanSuccess, onScanFailure);
+            } catch (e) {
+                console.warn("flipCamera facingMode xatosi:", e);
+            }
+        }
+        return;
+    }
+
+    let curIdx = list.findIndex(c => c.id === currentCameraId);
+    if (curIdx === -1) curIdx = 0;
+    const nextIdx = (curIdx + 1) % list.length;
+    currentCameraId = list[nextIdx].id;
+
+    const select = document.getElementById("cameraSelect");
+    if (select) select.value = currentCameraId;
+
+    if (isScannerRunning) {
+        try {
+            await startCameraStream();
+        } catch (e) {
+            console.warn("flipCamera xatosi:", e);
+        }
+    }
 }
 
 // Switch Camera on the fly
