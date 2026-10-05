@@ -15,6 +15,10 @@
             <span class="text-slate-800 font-bold font-mono">{{ order.order_number }}</span>
         </div>
         <div class="flex items-center space-x-2">
+            <a href="/qaytarish?order_id={{ order.id }}" class="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 border border-amber-300 shadow-2xs">
+                <i class="fa-solid fa-rotate-left text-amber-600 text-xs"></i>
+                <span>Qaytarish / Almashtirish</span>
+            </a>
             <a href="/nakladnoy/{{ order.id }}/chek" target="_blank" class="bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 border border-slate-200 shadow-2xs">
                 <i class="fa-solid fa-receipt text-sky-600 text-xs"></i>
                 <span>80mm Chek</span>

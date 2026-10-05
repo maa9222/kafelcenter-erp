@@ -1,0 +1,922 @@
+{% extends "base.html" %}
+
+{% block title %}Kafel Qaytarish & Almashtirish (20 Kun){% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-4">
+    <!-- Header with Breadcrumb and Status Info -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-0.5">
+        <div>
+            <div class="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-wider text-amber-600 mb-0.5">
+                <i class="fa-solid fa-rotate-left"></i>
+                <span>Mijoz Servisi & Ombor Kirimi</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center space-x-2.5">
+                <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i class="fa-solid fa-arrow-rotate-left"></i>
+                </span>
+                <span>Kafel Qaytarish &amp; Almashtirish</span>
+            </h1>
+            <p class="text-xs text-slate-500 mt-0.5">
+                Sotilgan kafelni <b>20 kun ichida</b> to'lov cheki bilan qaytarish, omborga qayta kirim qilish va o'rniga boshqa kafel berish
+            </p>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <a href="/sotuv" class="inline-flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs transition text-xs">
+                <i class="fa-solid fa-cash-register text-emerald-600"></i>
+                <span>Sotuv / Kassa</span>
+            </a>
+            <a href="/ombor" class="inline-flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs transition text-xs">
+                <i class="fa-solid fa-boxes-stacked text-sky-600"></i>
+                <span>Ombor Qoldig'i</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Section: Enter Receipt / Order Number -->
+    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/90 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+            <div class="flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-xs">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-slate-800 text-sm">To'lov Chekini Topish</h2>
+                    <p class="text-[11px] text-slate-400">Xaridor olib kelgan chekdagi raqamni kiriting</p>
+                </div>
+            </div>
+            <div class="text-[11px] text-slate-500 bg-amber-50 text-amber-800 px-3 py-1 rounded-xl border border-amber-200/70 font-medium">
+                <i class="fa-solid fa-calendar-check mr-1 text-amber-600"></i> Qaytarish qoidasi: <b>Chek sanasidan boshlab 20 kun</b>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center gap-2.5">
+            <div class="relative flex-1 w-full">
+                <input type="text" id="orderSearchInput" placeholder="Chek raqami (masalan: NK-261005-0001 yoki 0001) yoki xaridor telefoni..." 
+                       value="{{ initial_order_num }}"
+                       class="w-full pl-9 pr-9 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white font-mono uppercase font-semibold transition"
+                       onkeydown="if(event.key === 'Enter') searchOrder();">
+                <i class="fa-solid fa-barcode absolute left-3 top-3 text-slate-400 text-sm"></i>
+                <button type="button" onclick="document.getElementById('orderSearchInput').value=''; document.getElementById('orderSearchInput').focus();" 
+                        class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+
+            <button type="button" onclick="searchOrder()" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-xs transition flex items-center justify-center space-x-2 flex-shrink-0">
+                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                <span>Chekni Qidirish</span>
+            </button>
+        </div>
+
+        <!-- Search Error or Hint -->
+        <div id="searchAlert" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+    </div>
+
+    <!-- Active Loaded Order Section -->
+    <div id="loadedOrderContainer" class="hidden space-y-4">
+        
+        <!-- Order Meta Card & 20-Day Eligibility Status -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/90 space-y-3.5">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                    <div class="flex items-center space-x-2.5">
+                        <span class="text-xs font-bold text-slate-400 uppercase">Chek:</span>
+                        <h2 id="dispOrderNumber" class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono"></h2>
+                        <span id="dispOrderStatusBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700"></span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
+                        <span>Sotilgan vaqti: <b id="dispOrderCreatedAt" class="text-slate-800 font-mono"></b></span>
+                        <span>Sotuvchi: <b id="dispOrderSeller" class="text-slate-800"></b></span>
+                        <span>Xaridor: <b id="dispOrderCustomer" class="text-slate-800"></b></span>
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Jami Xarid Summasi:</span>
+                    <span id="dispOrderTotal" class="text-lg sm:text-xl font-black text-slate-900 font-mono"></span>
+                </div>
+            </div>
+
+            <!-- 20-Day Eligibility Banner (Dynamic) -->
+            <div id="eligibilityBanner" class="p-3.5 rounded-xl border flex items-start space-x-3 text-xs">
+                <!-- Dynamically filled via JS -->
+            </div>
+        </div>
+
+        <!-- Section 1: Kafelni Qaytarish (Chekdagi mahsulotlar) -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/90 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-xs">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-slate-900 text-sm">1. Qaytarilayotgan Kafellar (Omborga Qaytariladi)</h3>
+                        <p class="text-[11px] text-slate-400">Mijoz qaytarib olib kelgan kafel va miqdorini belgilang</p>
+                    </div>
+                </div>
+                <span class="text-xs font-bold text-slate-500">
+                    Jami Qaytarilayotgan: <b id="lblTotalReturnSum" class="text-rose-600 font-mono text-sm sm:text-base">0 so'm</b>
+                </span>
+            </div>
+
+            <!-- Table of Items from Order -->
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
+                        <tr>
+                            <th class="py-2.5 px-3">Kafel Nomi &amp; Markasi</th>
+                            <th class="py-2.5 px-3">O'lchami</th>
+                            <th class="py-2.5 px-3 text-center">Sotilgan</th>
+                            <th class="py-2.5 px-3 text-center">Ilgari Qaytarilgan</th>
+                            <th class="py-2.5 px-3 text-center">Qaytarish Mumkin</th>
+                            <th class="py-2.5 px-3 text-right">Dona/m² Narxi</th>
+                            <th class="py-2.5 px-3 text-center w-36">Qaytariladigan Miqdor</th>
+                            <th class="py-2.5 px-3 text-right">Qaytarish Summasi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="returnItemsTableBody" class="divide-y divide-slate-100 bg-white">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200/80 text-[11px] text-rose-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-info text-rose-600"></i>
+                    <span>Ushbu kafellar tasdiqlangandan so'ng avtomatik tarzda ombor hisobiga qaytariladi (+ kirim).</span>
+                </div>
+                <div class="font-black text-rose-900 text-xs">
+                    Kafel Qiymati: <span id="lblSubtotalReturn" class="font-mono">0 so'm</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: O'rniga Boshqa Kafel / Mahsulot Berish (Almashtirish) -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/90 space-y-3.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-slate-900 text-sm">2. O'rniga Olib Ketiladigan Kafel / Mahsulot (Almashtirish)</h3>
+                        <p class="text-[11px] text-slate-400">Xaridor qaytarilgan kafel o'rniga boshqa mahsulot olib ketmoqchimi?</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-bold text-slate-500">
+                        Jami Yangi Mahsulot: <b id="lblTotalExchangeSum" class="text-emerald-700 font-mono text-sm sm:text-base">0 so'm</b>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Product search and add for exchange -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Ombordan yangi kafel yoki mahsulot tanlash:
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <div class="sm:col-span-6 relative">
+                        <input type="text" id="exchangeSearchInput" placeholder="Kafel nomi, marka yoki SKU bo'yicha qidiring..." 
+                               class="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium"
+                               oninput="debouncedSearchExchangeProducts(this.value)">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                        
+                        <!-- Autocomplete Dropdown -->
+                        <div id="exchangeSearchResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <div class="flex items-center space-x-1">
+                            <input type="number" id="exchangeQtyInput" placeholder="Miqdori" min="0.1" step="any"
+                                   class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-mono font-bold">
+                            <span id="exchangeUnitLabel" class="text-xs text-slate-500 font-bold px-1.5">m²</span>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-3 flex items-center space-x-1.5">
+                        <button type="button" id="btnAddExchangeItem" onclick="addSelectedExchangeItem()" 
+                                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-2xs transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            <span>Savatga Qo'shish</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Selected Tile Preview Chip -->
+                <div id="selectedExchangeTileChip" class="hidden p-2 rounded-lg bg-emerald-100/70 border border-emerald-200 flex items-center justify-between text-xs text-emerald-950">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-check-circle text-emerald-600"></i>
+                        <span id="chipTileName" class="font-bold"></span>
+                        <span id="chipTilePrice" class="font-mono text-emerald-800 font-black"></span>
+                        <span id="chipTileStock" class="text-[10px] bg-white px-1.5 py-0.5 rounded border border-emerald-200"></span>
+                    </div>
+                    <button type="button" onclick="clearSelectedExchangeChip()" class="text-emerald-700 hover:text-emerald-900 text-sm font-bold">&times;</button>
+                </div>
+            </div>
+
+            <!-- List of Exchange Items -->
+            <div id="exchangeItemsContainer" class="space-y-2">
+                <div id="emptyExchangePlaceholder" class="text-center py-4 text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                    <i class="fa-solid fa-cart-flatbed text-slate-300 text-xl block mb-1"></i>
+                    Xaridor o'rniga boshqa kafel tanlamasa, mahsulot to'liq qaytarish qilinadi (yoki puli qaytariladi).
+                </div>
+
+                <div id="exchangeItemsTableWrapper" class="hidden overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
+                            <tr>
+                                <th class="py-2.5 px-3">Olinayotgan Mahsulot</th>
+                                <th class="py-2.5 px-3">O'lchami</th>
+                                <th class="py-2.5 px-3 text-center">Miqdori</th>
+                                <th class="py-2.5 px-3 text-right">Narxi</th>
+                                <th class="py-2.5 px-3 text-right">Jami Summa</th>
+                                <th class="py-2.5 px-3 text-center w-12">O'chirish</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exchangeItemsTableBody" class="divide-y divide-slate-100 bg-white">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Financial Summary & Final Balance -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/90 space-y-4">
+            <div class="border-b border-slate-100 pb-2.5">
+                <h3 class="font-black text-slate-900 text-sm flex items-center space-x-2">
+                    <i class="fa-solid fa-calculator text-sky-600"></i>
+                    <span>3. Yakuniy Hisob-Kitob va Farq (Balans)</span>
+                </h3>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Qaytarilgan Kafel:</span>
+                    <span id="finalReturnSumDisplay" class="text-base sm:text-lg font-black text-rose-600 font-mono">0 so'm</span>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">O'rniga Olingan:</span>
+                    <span id="finalExchangeSumDisplay" class="text-base sm:text-lg font-black text-emerald-600 font-mono">0 so'm</span>
+                </div>
+                <div id="differenceCard" class="p-3.5 rounded-xl border text-center bg-slate-100 border-slate-300">
+                    <span id="diffLabel" class="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Oraliq Farq:</span>
+                    <span id="finalDiffDisplay" class="text-base sm:text-lg font-black font-mono text-slate-800">0 so'm</span>
+                </div>
+            </div>
+
+            <!-- Notes & Payment Method -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                        Qaytarish / Almashtirish Sababi (Izoh):
+                    </label>
+                    <input type="text" id="returnReasonInput" placeholder="Masalan: Rang mos kelmadi, o'rniga Qora Angola olindi..." 
+                           class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-medium">
+                </div>
+
+                <div id="paymentMethodGroup" class="hidden">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                        Farq To'lovi Usuli (Xaridor to'laganda):
+                    </label>
+                    <select id="paymentMethodSelect" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-bold">
+                        <option value="naqd">Naqd Pul</option>
+                        <option value="karta">Plastik Karta (Terminal / Click)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Final Confirm Button -->
+            <div class="pt-2">
+                <button type="button" id="btnSubmitProcess" onclick="confirmAndProcessReturn()" 
+                        class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-sm sm:text-base py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                    <span>QAYTARISH VA ALMASHTIRISHNI TASDIQLASH</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Section 4: Oxirgi Qaytarish va Almashtirishlar Tarixi -->
+    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/90 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div class="flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-slate-900 text-sm">Oxirgi Qaytarish va Almashtirishlar Jurnali</h3>
+                    <p class="text-[11px] text-slate-400">Omborga qaytgan va almashtirilgan kafellar auditi</p>
+                </div>
+            </div>
+            <span class="text-xs font-bold text-slate-500">{{ returns_history|length }} ta qayd</span>
+        </div>
+
+        {% if returns_history %}
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="py-2.5 px-3">Hujjat №</th>
+                        <th class="py-2.5 px-3">Asosiy Chek</th>
+                        <th class="py-2.5 px-3">Sana</th>
+                        <th class="py-2.5 px-3">Xaridor</th>
+                        <th class="py-2.5 px-3 text-right">Qaytarildi (+)</th>
+                        <th class="py-2.5 px-3 text-right">Almashtirildi (-)</th>
+                        <th class="py-2.5 px-3 text-center">Oraliq Farq</th>
+                        <th class="py-2.5 px-3">Kassir</th>
+                        <th class="py-2.5 px-3 text-center">Amallar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for ret in returns_history %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-2.5 px-3 font-mono font-black text-slate-900">{{ ret.return_number }}</td>
+                        <td class="py-2.5 px-3 font-mono font-bold text-sky-700">
+                            <a href="/nakladnoy/{{ ret.order_id }}" class="hover:underline">{{ ret.order_number }}</a>
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-600">{{ ret.created_at }}</td>
+                        <td class="py-2.5 px-3 font-bold text-slate-800">{{ ret.customer_name or 'Mijoz' }}</td>
+                        <td class="py-2.5 px-3 text-right font-mono font-black text-rose-600">
+                            +{{ "{:,.0f}".format(ret.return_amount).replace(",", " ") }} so'm
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-mono font-black text-emerald-700">
+                            {% if ret.exchange_amount > 0 %}
+                            -{{ "{:,.0f}".format(ret.exchange_amount).replace(",", " ") }} so'm
+                            {% else %}
+                            <span class="text-slate-400 font-normal">Olinmadi</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2.5 px-3 text-center font-mono font-bold">
+                            {% if ret.difference_amount > 0 %}
+                            <span class="inline-block px-2 py-0.5 bg-amber-100 text-amber-900 rounded text-[11px]">
+                                +{{ "{:,.0f}".format(ret.difference_amount).replace(",", " ") }} (To'landi)
+                            </span>
+                            {% elif ret.difference_amount < 0 %}
+                            <span class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded text-[11px]">
+                                {{ "{:,.0f}".format(ret.difference_amount|abs).replace(",", " ") }} (Qaytarildi)
+                            </span>
+                            {% else %}
+                            <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px]">
+                                0 so'm (Teng)
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-600 font-medium">{{ ret.user_name or 'Kassir' }}</td>
+                        <td class="py-2.5 px-3 text-center">
+                            <a href="/qaytarish/{{ ret.id }}/chek" target="_blank" 
+                               class="inline-flex items-center space-x-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[11px] font-bold shadow-2xs transition"
+                               title="80mm Qaytarish Chekini Chop Etish">
+                                <i class="fa-solid fa-receipt text-sky-600"></i>
+                                <span>Chek</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-6 text-slate-400 text-xs">
+            <i class="fa-solid fa-inbox text-2xl text-slate-300 block mb-1"></i>
+            Hozircha hech qanday kafel qaytarish yoki almashtirish amalga oshirilmagan.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ==================== JAVASCRIPT LOGIC ==================== -->
+<script>
+let currentOrder = null;
+let orderItems = [];
+let exchangeItems = []; // [{product_id, brand, model_name, size, unit, qty, price, stock}]
+let selectedExchangeProduct = null;
+let searchTimeout = null;
+
+// Initial load if query parameters provided
+document.addEventListener("DOMContentLoaded", () => {
+    const initId = "{{ initial_order_id }}";
+    const initNum = "{{ initial_order_num }}";
+    if (initId || initNum) {
+        searchOrder(initId || initNum);
+    }
+});
+
+// Search order by order number, ID, or customer info
+async function searchOrder(forcedQuery) {
+    const q = forcedQuery || document.getElementById("orderSearchInput").value.trim();
+    const alertBox = document.getElementById("searchAlert");
+    alertBox.classList.add("hidden");
+
+    if (!q) {
+        showSearchAlert("Iltimos, chek yoki nakladnoy raqamini kiriting!", "danger");
+        return;
+    }
+
+    try {
+        const url = `/api/return/check-order?${isNaN(q) ? 'q=' + encodeURIComponent(q) : 'order_id=' + encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data.success) {
+            showSearchAlert(data.message || "Chek topilmadi!", "danger");
+            document.getElementById("loadedOrderContainer").classList.add("hidden");
+            currentOrder = null;
+            return;
+        }
+
+        renderLoadedOrder(data.order, data.items);
+    } catch (err) {
+        showSearchAlert("Server bilan bog'lanishda xatolik: " + err.message, "danger");
+    }
+}
+
+function showSearchAlert(msg, type = "danger") {
+    const alertBox = document.getElementById("searchAlert");
+    alertBox.innerText = msg;
+    alertBox.className = `p-3 rounded-xl text-xs font-semibold ${type === 'danger' ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`;
+    alertBox.classList.remove("hidden");
+}
+
+function renderLoadedOrder(order, items) {
+    currentOrder = order;
+    orderItems = items;
+    exchangeItems = []; // reset exchange items
+
+    document.getElementById("loadedOrderContainer").classList.remove("hidden");
+
+    // Fill meta details
+    document.getElementById("dispOrderNumber").innerText = order.order_number;
+    document.getElementById("dispOrderStatusBadge").innerText = order.status === 'yuk_berildi' ? 'Yuk berilgan' : 'To\'langan';
+    document.getElementById("dispOrderCreatedAt").innerText = order.created_at;
+    document.getElementById("dispOrderSeller").innerText = order.seller_name;
+    document.getElementById("dispOrderCustomer").innerText = order.customer_name + (order.customer_phone ? ` (${order.customer_phone})` : '');
+    document.getElementById("dispOrderTotal").innerText = formatMoney(order.total_amount) + " so'm";
+
+    // 20-Day Eligibility Banner
+    const banner = document.getElementById("eligibilityBanner");
+    if (order.is_within_20_days) {
+        banner.className = "p-3.5 rounded-xl border flex items-start space-x-3 text-xs bg-emerald-50 border-emerald-300 text-emerald-950";
+        banner.innerHTML = `
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-base flex-shrink-0">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="space-y-0.5">
+                <div class="font-black text-sm text-emerald-900 flex items-center space-x-2">
+                    <span>20 KUNLIK MUDDAT ICHIDA (QAYTARISHGA RUXSAT ETILGAN)</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-200 text-emerald-900 font-mono font-bold">${order.days_passed} kun bo'ldi</span>
+                </div>
+                <p class="text-emerald-800 text-[11px] leading-relaxed">
+                    Ushbu kafel sotilganiga <b>${order.days_passed} kun</b> bo'lgan. 20 kunlik kafolat muddati tugashiga yana <b>${order.days_remaining} kun</b> bor. Mahsulot omborga qabul qilinib, o'rniga boshqa kafel berilishi mumkin.
+                </p>
+            </div>
+        `;
+    } else {
+        banner.className = "p-3.5 rounded-xl border flex items-start space-x-3 text-xs bg-rose-50 border-rose-300 text-rose-950";
+        banner.innerHTML = `
+            <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center text-base flex-shrink-0">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="space-y-0.5">
+                <div class="font-black text-sm text-rose-900 flex items-center space-x-2">
+                    <span>DIQQAT: 20 KUNLIK QAYTARISH MUDDATI TUGAGAN!</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] bg-rose-200 text-rose-900 font-mono font-bold">${order.days_passed} kun o'tgan</span>
+                </div>
+                <p class="text-rose-800 text-[11px] leading-relaxed">
+                    Ushbu kafel sotilganiga <b>${order.days_passed} kun</b> bo'lgan. Chekdagi eslatma shartiga ko'ra kafellarni faqat <b>20 kun ichida</b> qaytarish mumkin.
+                    {% if current_user.role == 'admin' %}
+                    <span class="font-bold text-rose-950 block mt-1"><i class="fa-solid fa-shield-halved"></i> Siz Super Admin bo'lganingiz sababli istisno tariqasida tasdiqlashingiz mumkin.</span>
+                    {% else %}
+                    <span class="font-bold text-rose-950 block mt-1">Qaytarish uchun Super Admin ruxsati talab etiladi.</span>
+                    {% endif %}
+                </p>
+            </div>
+        `;
+    }
+
+    // Render Order Items Table
+    const tbody = document.getElementById("returnItemsTableBody");
+    tbody.innerHTML = "";
+
+    order.items = items;
+    items.forEach((item, index) => {
+        const canReturn = item.available_quantity > 0;
+        const tr = document.createElement("tr");
+        tr.className = `hover:bg-slate-50/70 transition ${!canReturn ? 'opacity-60 bg-slate-50' : ''}`;
+        
+        tr.innerHTML = `
+            <td class="py-2.5 px-3 flex items-center space-x-2.5">
+                <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                    ${item.image_path ? `<img src="${item.image_path}" class="w-full h-full object-cover">` : '<i class="fa-solid fa-shapes text-slate-400"></i>'}
+                </div>
+                <div>
+                    <span class="text-[9px] uppercase font-black text-sky-600 block">${escapeHtml(item.brand)}</span>
+                    <span class="font-bold text-slate-900 text-xs block leading-tight">${escapeHtml(item.model_name)}</span>
+                </div>
+            </td>
+            <td class="py-2.5 px-3 text-slate-600 font-medium">${escapeHtml(item.size)}</td>
+            <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-700">${item.quantity} ${item.unit}</td>
+            <td class="py-2.5 px-3 text-center font-mono text-slate-500">${item.returned_quantity} ${item.unit}</td>
+            <td class="py-2.5 px-3 text-center font-mono font-black ${item.available_quantity > 0 ? 'text-emerald-700' : 'text-slate-400'}">
+                ${item.available_quantity} ${item.unit}
+            </td>
+            <td class="py-2.5 px-3 text-right font-mono text-slate-800">${formatMoney(item.unit_price)}</td>
+            <td class="py-2.5 px-3 text-center">
+                ${canReturn ? `
+                    <div class="flex items-center justify-center space-x-1">
+                        <input type="number" id="input_ret_${item.id}" 
+                               min="0" max="${item.available_quantity}" step="any" value="0"
+                               data-item-id="${item.id}" data-unit-price="${item.unit_price}" data-unit="${item.unit}"
+                               class="return-qty-input w-20 px-2 py-1 text-center font-mono font-bold text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-rose-500 focus:bg-white"
+                               oninput="calculateTotals()">
+                        <button type="button" onclick="setReturnMax(${item.id}, ${item.available_quantity})" 
+                                class="px-1.5 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-300"
+                                title="Hammasini qaytarish">Max</button>
+                    </div>
+                ` : `
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Qaytarilgan</span>
+                `}
+            </td>
+            <td class="py-2.5 px-3 text-right font-mono font-black text-rose-600" id="item_sum_${item.id}">
+                0 so'm
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    renderExchangeTable();
+    calculateTotals();
+}
+
+function setReturnMax(itemId, maxQty) {
+    const input = document.getElementById(`input_ret_${itemId}`);
+    if (input) {
+        input.value = maxQty;
+        calculateTotals();
+    }
+}
+
+// ================= PRODUCT EXCHANGE AUTOCOMPLETE =================
+function debouncedSearchExchangeProducts(val) {
+    clearTimeout(searchTimeout);
+    if (!val || val.trim().length < 1) {
+        document.getElementById("exchangeSearchResults").classList.add("hidden");
+        return;
+    }
+    searchTimeout = setTimeout(() => searchExchangeProducts(val.trim()), 200);
+}
+
+async function searchExchangeProducts(q) {
+    try {
+        const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=10`);
+        const data = await res.json();
+        const resultsEl = document.getElementById("exchangeSearchResults");
+        resultsEl.innerHTML = "";
+
+        if (!data.success || !data.products || data.products.length === 0) {
+            resultsEl.innerHTML = `<div class="p-3 text-slate-400 text-center">Bunday kafel topilmadi</div>`;
+            resultsEl.classList.remove("hidden");
+            return;
+        }
+
+        data.products.forEach(p => {
+            const div = document.createElement("div");
+            div.className = "p-2.5 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition";
+            div.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden">
+                        ${p.image_path ? `<img src="${p.image_path}" class="w-full h-full object-cover">` : '<i class="fa-solid fa-shapes text-slate-400 text-xs"></i>'}
+                    </div>
+                    <div>
+                        <span class="text-[9px] uppercase font-bold text-sky-600 block">${escapeHtml(p.brand)}</span>
+                        <span class="font-bold text-slate-900 block leading-tight">${escapeHtml(p.model_name)}</span>
+                        <span class="text-[10px] text-slate-400">${escapeHtml(p.size)}</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-bold text-slate-800 block">${formatMoney(p.price)} so'm</span>
+                    <span class="text-[10px] font-bold ${p.quantity_in_stock > 0 ? 'text-emerald-600' : 'text-rose-500'}">Omborda: ${p.quantity_in_stock} ${p.unit}</span>
+                </div>
+            `;
+            div.onclick = () => selectExchangeProduct(p);
+            resultsEl.appendChild(div);
+        });
+
+        resultsEl.classList.remove("hidden");
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function selectExchangeProduct(prod) {
+    selectedExchangeProduct = prod;
+    document.getElementById("exchangeSearchResults").classList.add("hidden");
+    document.getElementById("exchangeSearchInput").value = `${prod.brand} - ${prod.model_name}`;
+    document.getElementById("exchangeUnitLabel").innerText = prod.unit || "m²";
+
+    // Show Chip
+    const chip = document.getElementById("selectedExchangeTileChip");
+    document.getElementById("chipTileName").innerText = `${prod.brand} - ${prod.model_name} (${prod.size})`;
+    document.getElementById("chipTilePrice").innerText = `${formatMoney(prod.price)} so'm / ${prod.unit}`;
+    document.getElementById("chipTileStock").innerText = `Omborda: ${prod.quantity_in_stock} ${prod.unit}`;
+    chip.classList.remove("hidden");
+
+    document.getElementById("exchangeQtyInput").focus();
+}
+
+function clearSelectedExchangeChip() {
+    selectedExchangeProduct = null;
+    document.getElementById("selectedExchangeTileChip").classList.add("hidden");
+    document.getElementById("exchangeSearchInput").value = "";
+    document.getElementById("exchangeQtyInput").value = "";
+}
+
+function addSelectedExchangeItem() {
+    if (!selectedExchangeProduct) {
+        showToast("Iltimos, avval ombordan almashtiriladigan kafelni tanlang!", "warning");
+        return;
+    }
+    const qtyInput = document.getElementById("exchangeQtyInput");
+    const qty = parseFloat(qtyInput.value);
+    if (!qty || qty <= 0) {
+        showToast("Iltimos, miqdorni to'g'ri kiriting!", "warning");
+        qtyInput.focus();
+        return;
+    }
+    if (qty > selectedExchangeProduct.quantity_in_stock) {
+        showToast(`Omborda yetarli kafel yo'q! Mavjud: ${selectedExchangeProduct.quantity_in_stock} ${selectedExchangeProduct.unit}`, "danger");
+        return;
+    }
+
+    // Check if already in list
+    const existing = exchangeItems.find(i => i.product_id === selectedExchangeProduct.id);
+    if (existing) {
+        existing.qty += qty;
+    } else {
+        exchangeItems.push({
+            product_id: selectedExchangeProduct.id,
+            brand: selectedExchangeProduct.brand,
+            model_name: selectedExchangeProduct.model_name,
+            size: selectedExchangeProduct.size,
+            unit: selectedExchangeProduct.unit,
+            qty: qty,
+            price: selectedExchangeProduct.price,
+            stock: selectedExchangeProduct.quantity_in_stock
+        });
+    }
+
+    clearSelectedExchangeChip();
+    renderExchangeTable();
+    calculateTotals();
+    showToast("Yangi mahsulot almashtirish savatiga qo'shildi!", "success");
+}
+
+function removeExchangeItem(index) {
+    exchangeItems.splice(index, 1);
+    renderExchangeTable();
+    calculateTotals();
+}
+
+function renderExchangeTable() {
+    const placeholder = document.getElementById("emptyExchangePlaceholder");
+    const wrapper = document.getElementById("exchangeItemsTableWrapper");
+    const tbody = document.getElementById("exchangeItemsTableBody");
+
+    if (exchangeItems.length === 0) {
+        placeholder.classList.remove("hidden");
+        wrapper.classList.add("hidden");
+        tbody.innerHTML = "";
+        return;
+    }
+
+    placeholder.classList.add("hidden");
+    wrapper.classList.remove("hidden");
+    tbody.innerHTML = "";
+
+    exchangeItems.forEach((itm, idx) => {
+        const itemTot = itm.qty * itm.price;
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+            <td class="py-2.5 px-3">
+                <span class="text-[9px] uppercase font-bold text-sky-600 block">${escapeHtml(itm.brand)}</span>
+                <span class="font-bold text-slate-900 text-xs block leading-tight">${escapeHtml(itm.model_name)}</span>
+            </td>
+            <td class="py-2.5 px-3 text-slate-600 font-medium">${escapeHtml(itm.size)}</td>
+            <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-800">
+                <input type="number" min="0.1" step="any" value="${itm.qty}" 
+                       class="w-16 px-1.5 py-0.5 text-center font-bold font-mono text-xs border border-slate-300 rounded"
+                       onchange="updateExchangeQty(${idx}, this.value)">
+                ${itm.unit}
+            </td>
+            <td class="py-2.5 px-3 text-right font-mono text-slate-700">${formatMoney(itm.price)}</td>
+            <td class="py-2.5 px-3 text-right font-mono font-black text-emerald-800">${formatMoney(itemTot)} so'm</td>
+            <td class="py-2.5 px-3 text-center">
+                <button type="button" onclick="removeExchangeItem(${idx})" class="text-rose-500 hover:text-rose-700 text-xs p-1" title="O'chirish">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function updateExchangeQty(index, newQty) {
+    const q = parseFloat(newQty);
+    if (!q || q <= 0) return;
+    exchangeItems[index].qty = q;
+    renderExchangeTable();
+    calculateTotals();
+}
+
+// ================= CALCULATION OF TOTALS AND DIFFERENCE =================
+function calculateTotals() {
+    let totalReturn = 0;
+    const inputs = document.querySelectorAll(".return-qty-input");
+
+    inputs.forEach(inp => {
+        const itemId = inp.dataset.itemId;
+        const unitPrice = parseFloat(inp.dataset.unitPrice) || 0;
+        const qty = parseFloat(inp.value) || 0;
+        const itemTot = qty * unitPrice;
+
+        const sumCell = document.getElementById(`item_sum_${itemId}`);
+        if (sumCell) {
+            sumCell.innerText = formatMoney(itemTot) + " so'm";
+        }
+        totalReturn += itemTot;
+    });
+
+    let totalExchange = 0;
+    exchangeItems.forEach(i => {
+        totalExchange += (i.qty * i.price);
+    });
+
+    const diff = totalExchange - totalReturn;
+
+    // Display updates
+    document.getElementById("lblTotalReturnSum").innerText = formatMoney(totalReturn) + " so'm";
+    document.getElementById("lblSubtotalReturn").innerText = formatMoney(totalReturn) + " so'm";
+    document.getElementById("finalReturnSumDisplay").innerText = formatMoney(totalReturn) + " so'm";
+
+    document.getElementById("lblTotalExchangeSum").innerText = formatMoney(totalExchange) + " so'm";
+    document.getElementById("finalExchangeSumDisplay").innerText = formatMoney(totalExchange) + " so'm";
+
+    const diffCard = document.getElementById("differenceCard");
+    const diffLabel = document.getElementById("diffLabel");
+    const diffDisp = document.getElementById("finalDiffDisplay");
+    const payGroup = document.getElementById("paymentMethodGroup");
+
+    if (diff > 0.01) {
+        // Customer needs to pay extra
+        diffCard.className = "p-3.5 rounded-xl border text-center bg-amber-50 border-amber-300";
+        diffLabel.innerText = "XARIDOR QO'SHIMCHA TO'LAYDI:";
+        diffLabel.className = "text-[10px] uppercase font-black text-amber-800 block mb-0.5";
+        diffDisp.innerText = "+" + formatMoney(diff) + " so'm";
+        diffDisp.className = "text-base sm:text-lg font-black font-mono text-amber-900";
+        payGroup.classList.remove("hidden");
+    } else if (diff < -0.01) {
+        // Cashier refunds customer
+        diffCard.className = "p-3.5 rounded-xl border text-center bg-emerald-50 border-emerald-300";
+        diffLabel.innerText = "MIJOZGA QAYTARILADIGAN PUL:";
+        diffLabel.className = "text-[10px] uppercase font-black text-emerald-800 block mb-0.5";
+        diffDisp.innerText = formatMoney(Math.abs(diff)) + " so'm";
+        diffDisp.className = "text-base sm:text-lg font-black font-mono text-emerald-900";
+        payGroup.classList.add("hidden");
+    } else {
+        // Exactly balanced
+        diffCard.className = "p-3.5 rounded-xl border text-center bg-slate-100 border-slate-300";
+        diffLabel.innerText = "TENG QIYMATLI ALMASHTIRISH:";
+        diffLabel.className = "text-[10px] uppercase font-black text-slate-600 block mb-0.5";
+        diffDisp.innerText = "0 so'm farq";
+        diffDisp.className = "text-base sm:text-lg font-black font-mono text-slate-800";
+        payGroup.classList.add("hidden");
+    }
+}
+
+// ================= CONFIRM AND PROCESS RETURN =================
+function confirmAndProcessReturn() {
+    if (!currentOrder) {
+        showToast("Avval chekni qidiring!", "danger");
+        return;
+    }
+
+    const returnedItemsPayload = [];
+    const inputs = document.querySelectorAll(".return-qty-input");
+    inputs.forEach(inp => {
+        const qty = parseFloat(inp.value) || 0;
+        if (qty > 0) {
+            returnedItemsPayload.push({
+                order_item_id: parseInt(inp.dataset.itemId),
+                qty: qty
+            });
+        }
+    });
+
+    if (returnedItemsPayload.length === 0) {
+        showToast("Qaytarish uchun kamida bitta kafel miqdorini kiriting!", "warning");
+        return;
+    }
+
+    // Modal or confirm prompt
+    const totalReturnText = document.getElementById("finalReturnSumDisplay").innerText;
+    const totalExchangeText = document.getElementById("finalExchangeSumDisplay").innerText;
+    const diffText = document.getElementById("finalDiffDisplay").innerText;
+
+    const confirmHtml = `
+        <div class="space-y-2 text-xs">
+            <p class="font-bold text-slate-800">Qaytarish va almashtirish amalini tasdiqlaysizmi?</p>
+            <div class="p-2.5 rounded-xl bg-slate-100 space-y-1">
+                <div class="flex justify-between"><span>Chek:</span><b class="font-mono">${currentOrder.order_number}</b></div>
+                <div class="flex justify-between"><span>Qaytarilayotgan summa:</span><b class="text-rose-600 font-mono">${totalReturnText}</b></div>
+                <div class="flex justify-between"><span>Yangi mahsulotlar:</span><b class="text-emerald-700 font-mono">${totalExchangeText}</b></div>
+                <div class="flex justify-between border-t border-slate-300 pt-1"><span>Hisob-kitob:</span><b class="font-mono text-slate-900">${diffText}</b></div>
+            </div>
+            <p class="text-[11px] text-slate-500">
+                * Qaytarilgan kafellar zudlik bilan ombor qoldig'iga qo'shiladi va chek chiqariladi.
+            </p>
+        </div>
+    `;
+
+    if (typeof window.showConfirmModal === "function") {
+        window.showConfirmModal({
+            title: "Qaytarishni Tasdiqlash",
+            html: confirmHtml,
+            confirmText: "Tasdiqlash & Omborga Kirim Qilish",
+            confirmClass: "px-5 py-2.5 rounded-xl text-xs font-black bg-slate-900 hover:bg-slate-800 text-white shadow-md transition",
+            onConfirm: () => executeProcessReturn(returnedItemsPayload)
+        });
+    } else {
+        if (confirm("Qaytarishni tasdiqlaysizmi?")) {
+            executeProcessReturn(returnedItemsPayload);
+        }
+    }
+}
+
+async function executeProcessReturn(returnedItemsPayload) {
+    const btn = document.getElementById("btnSubmitProcess");
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Omborga kiritilmoqda...</span>`;
+
+    const payload = {
+        order_id: currentOrder.id,
+        returned_items: returnedItemsPayload,
+        exchange_items: exchangeItems.map(i => ({
+            product_id: i.product_id,
+            qty: i.qty,
+            price: i.price
+        })),
+        reason: document.getElementById("returnReasonInput").value.trim(),
+        payment_method: document.getElementById("paymentMethodSelect").value
+    };
+
+    try {
+        const res = await fetch("/api/return/process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            showToast(result.message || "Kafel muvaffaqiyatli qabul qilindi!", "success");
+            
+            // Open print receipt in new window or redirect
+            setTimeout(() => {
+                window.location.href = `/qaytarish/${result.return_id}/chek`;
+            }, 1000);
+        } else {
+            showToast(result.message || "Xatolik yuz berdi!", "danger");
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> <span>QAYTARISH VA ALMASHTIRISHNI TASDIQLASH</span>`;
+        }
+    } catch (err) {
+        showToast("Xatolik: " + err.message, "danger");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> <span>QAYTARISH VA ALMASHTIRISHNI TASDIQLASH</span>`;
+    }
+}
+
+// Helpers
+function formatMoney(num) {
+    return Math.round(num || 0).toLocaleString("ru-RU").replace(/,/g, " ");
+}
+
+function escapeHtml(text) {
+    if (!text) return "";
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+</script>
+{% endblock %}

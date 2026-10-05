@@ -1231,6 +1231,442 @@ def api_order_dispatch(order_id):
     )
     return jsonify({"success": True, "message": "Yuk muvaffaqiyatli xaridorga berildi deb belgilandi!"})
 
+# ----------------- MAHSULOT QAYTARISH VA ALMASHTIRISH (RETURNS & EXCHANGES) -----------------
+
+@app.route("/qaytarish")
+@role_required(["admin", "sotuvchi", "omborchi"])
+def qaytarish_view():
+    """Kafelni qaytarish va almashtirish sahifasi (20 kunlik muddat tekshiruvi bilan)"""
+    conn = database.get_db()
+    cursor = conn.cursor()
+    
+    # Qaytarishlar tarixini olish
+    cursor.execute("""
+        SELECT r.*, o.order_number as orig_order_num, o.created_at as order_created_at
+        FROM returns r
+        LEFT JOIN orders o ON r.order_id = o.id
+        ORDER BY r.id DESC
+        LIMIT 50
+    """)
+    returns_history = cursor.fetchall()
+    
+    # Barcha qaytarish elementlari
+    return_ids = [r["id"] for r in returns_history]
+    items_by_return = {}
+    if return_ids:
+        placeholders = ",".join("?" * len(return_ids))
+        cursor.execute(f"""
+            SELECT * FROM return_items WHERE return_id IN ({placeholders})
+        """, return_ids)
+        for item in cursor.fetchall():
+            items_by_return.setdefault(item["return_id"], []).append(dict(item))
+            
+    conn.close()
+    
+    initial_order_id = request.args.get("order_id", "").strip()
+    initial_order_num = request.args.get("order_num", "").strip()
+    
+    return render_template(
+        "qaytarish.html",
+        returns_history=returns_history,
+        items_by_return=items_by_return,
+        initial_order_id=initial_order_id,
+        initial_order_num=initial_order_num
+    )
+
+@app.route("/api/return/check-order")
+@role_required(["admin", "sotuvchi", "omborchi"])
+def api_return_check_order():
+    """Chek / Nakladnoy raqami bo'yicha buyurtmani va 20 kunlik muddatni tekshirish"""
+    q = request.args.get("q", "").strip()
+    order_id = request.args.get("order_id", "").strip()
+    
+    conn = database.get_db()
+    cursor = conn.cursor()
+    
+    order = None
+    if order_id and order_id.isdigit():
+        cursor.execute("SELECT * FROM orders WHERE id = ?", (int(order_id),))
+        order = cursor.fetchone()
+    elif q:
+        # 1. Exact match on order_number
+        cursor.execute("SELECT * FROM orders WHERE LOWER(TRIM(order_number)) = LOWER(TRIM(?))", (q,))
+        order = cursor.fetchone()
+        if not order:
+            # 2. Match without NK- prefix or partial
+            clean_q = q.replace("NK-", "").replace("nk-", "")
+            cursor.execute("SELECT * FROM orders WHERE order_number LIKE ? ORDER BY id DESC LIMIT 1", (f"%{clean_q}%",))
+            order = cursor.fetchone()
+        if not order:
+            # 3. Search by phone or customer name
+            cursor.execute("SELECT * FROM orders WHERE customer_phone LIKE ? OR customer_name LIKE ? ORDER BY id DESC LIMIT 1", (f"%{q}%", f"%{q}%"))
+            order = cursor.fetchone()
+
+    if not order:
+        conn.close()
+        return jsonify({"success": False, "message": "Bunday chek yoki nakladnoy topilmadi! Iltimos, chek raqamini to'g'ri kiriting."}), 404
+        
+    # 20 kunlik muddatni hisoblash
+    raw_created = str(order["created_at"])[:19]
+    try:
+        created_dt = datetime.strptime(raw_created, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        try:
+            created_dt = datetime.strptime(raw_created, "%Y-%m-%d")
+        except Exception:
+            created_dt = datetime.now()
+            
+    days_passed = max(0, (datetime.now() - created_dt).days)
+    is_within_20_days = (days_passed <= 20)
+    days_remaining = max(0, 20 - days_passed)
+    
+    # Buyurtma tarkibidagi mahsulotlarni yuklash
+    cursor.execute("""
+        SELECT oi.*, p.quantity_in_stock as current_stock, p.sku, p.image_path as current_image
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+    """, (order["id"],))
+    order_items_rows = cursor.fetchall()
+    
+    items = []
+    has_returnable_items = False
+    for row in order_items_rows:
+        orig_qty = float(row["quantity"])
+        ret_qty = float(row["returned_quantity"] or 0)
+        avail_qty = max(0.0, orig_qty - ret_qty)
+        if avail_qty > 0.001:
+            has_returnable_items = True
+            
+        items.append({
+            "id": row["id"],
+            "product_id": row["product_id"],
+            "brand": row["brand"],
+            "model_name": row["model_name"],
+            "size": row["size"],
+            "unit": row["unit"],
+            "quantity": orig_qty,
+            "returned_quantity": ret_qty,
+            "available_quantity": avail_qty,
+            "unit_price": float(row["unit_price"]),
+            "total_price": float(row["total_price"]),
+            "current_stock": float(row["current_stock"] or 0),
+            "image_path": row["image_path"] or row["current_image"] or ""
+        })
+        
+    conn.close()
+    
+    return jsonify({
+        "success": True,
+        "order": {
+            "id": order["id"],
+            "order_number": order["order_number"],
+            "customer_name": order["customer_name"] or "Mijoz",
+            "customer_phone": order["customer_phone"] or "",
+            "total_amount": float(order["total_amount"]),
+            "paid_amount": float(order["paid_amount"]),
+            "payment_method": order["payment_method"],
+            "status": order["status"],
+            "seller_name": order["seller_name"] or "Sotuvchi",
+            "created_at": str(order["created_at"]),
+            "days_passed": days_passed,
+            "is_within_20_days": is_within_20_days,
+            "days_remaining": days_remaining,
+            "has_returnable_items": has_returnable_items
+        },
+        "items": items
+    })
+
+@app.route("/api/return/process", methods=["POST"])
+@role_required(["admin", "sotuvchi"])
+def api_return_process():
+    """Kafelni qaytarish va omborga kirim qilish, o'rniga boshqa mahsulot berish"""
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "message": "Ma'lumotlar yuborilmadi!"}), 400
+        
+    order_id = data.get("order_id")
+    returned_items = data.get("returned_items", []) # [{order_item_id, qty}]
+    exchange_items = data.get("exchange_items", []) # [{product_id, qty, price}]
+    reason = (data.get("reason") or "Xaridor talabiga binoan qaytarildi / almashtirildi").strip()
+    payment_method = data.get("payment_method", "naqd") # farq to'lovi turi
+    
+    if not order_id:
+        return jsonify({"success": False, "message": "Buyurtma ID si ko'rsatilmadi!"}), 400
+    if not returned_items:
+        return jsonify({"success": False, "message": "Qaytariladigan hech qanday mahsulot tanlanmadi!"}), 400
+        
+    conn = database.get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # 1. Buyurtmani tekshirish
+        cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+        order = cursor.fetchone()
+        if not order:
+            conn.rollback()
+            conn.close()
+            return jsonify({"success": False, "message": "Buyurtma topilmadi!"}), 404
+            
+        # 20 kunlik muddat tekshiruvi
+        raw_created = str(order["created_at"])[:19]
+        try:
+            created_dt = datetime.strptime(raw_created, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            try:
+                created_dt = datetime.strptime(raw_created, "%Y-%m-%d")
+            except Exception:
+                created_dt = datetime.now()
+        days_passed = max(0, (datetime.now() - created_dt).days)
+        
+        # Agar 20 kundan o'tgan bo'lsa va admin bo'lmasa rad etish
+        if days_passed > 20 and session.get("role") != "admin":
+            conn.rollback()
+            conn.close()
+            return jsonify({
+                "success": False,
+                "message": f"Kafel sotilganiga {days_passed} kun bo'lgan! 20 kunlik qaytarish muddati tugagan (chekdagi shartga asosan faqat 20 kun ichida qaytarish mumkin)."
+            }), 400
+            
+        # 2. Qaytarilayotgan mahsulotlar va miqdorlarni tekshirish
+        total_return_amount = 0.0
+        validated_returns = []
+        for r_item in returned_items:
+            oi_id = r_item.get("order_item_id")
+            ret_qty = float(r_item.get("qty", 0) or 0)
+            if ret_qty <= 0:
+                continue
+                
+            cursor.execute("SELECT * FROM order_items WHERE id = ? AND order_id = ?", (oi_id, order_id))
+            oi = cursor.fetchone()
+            if not oi:
+                conn.rollback()
+                conn.close()
+                return jsonify({"success": False, "message": f"Buyurtma elementi (ID {oi_id}) topilmadi!"}), 400
+                
+            already_ret = float(oi["returned_quantity"] or 0)
+            orig_qty = float(oi["quantity"])
+            max_can_return = max(0.0, orig_qty - already_ret)
+            
+            if ret_qty > max_can_return + 0.0001:
+                conn.rollback()
+                conn.close()
+                return jsonify({
+                    "success": False,
+                    "message": f"'{oi['brand']} {oi['model_name']}' kafeli bo'yicha maksimal {max_can_return} {oi['unit']} qaytarish mumkin (so'raldi: {ret_qty} {oi['unit']})!"
+                }), 400
+                
+            item_total = ret_qty * float(oi["unit_price"])
+            total_return_amount += item_total
+            validated_returns.append({
+                "order_item": oi,
+                "qty": ret_qty,
+                "total_price": item_total
+            })
+            
+        if not validated_returns:
+            conn.rollback()
+            conn.close()
+            return jsonify({"success": False, "message": "Qaytarilayotgan miqdor 0 dan katta bo'lishi kerak!"}), 400
+            
+        # 3. Almashtirilayotgan yangi mahsulotlarni tekshirish (agar bo'lsa)
+        total_exchange_amount = 0.0
+        validated_exchanges = []
+        for ex_item in exchange_items:
+            p_id = ex_item.get("product_id")
+            ex_qty = float(ex_item.get("qty", 0) or 0)
+            if ex_qty <= 0:
+                continue
+                
+            cursor.execute("SELECT * FROM products WHERE id = ?", (p_id,))
+            p = cursor.fetchone()
+            if not p:
+                conn.rollback()
+                conn.close()
+                return jsonify({"success": False, "message": f"Almashtirilayotgan mahsulot (ID {p_id}) topilmadi!"}), 400
+                
+            if float(p["quantity_in_stock"]) < ex_qty:
+                conn.rollback()
+                conn.close()
+                return jsonify({
+                    "success": False,
+                    "message": f"'{p['brand']} {p['model_name']}' kafeli omborda yetarli emas! Mavjud: {p['quantity_in_stock']} {p['unit']}, so'raldi: {ex_qty} {p['unit']}"
+                }), 400
+                
+            unit_price = float(ex_item.get("price") or p["price"])
+            item_total = ex_qty * unit_price
+            total_exchange_amount += item_total
+            validated_exchanges.append({
+                "product": p,
+                "qty": ex_qty,
+                "unit_price": unit_price,
+                "total_price": item_total
+            })
+            
+        diff_amount = total_exchange_amount - total_return_amount
+        return_num = database.generate_return_number()
+        staff_name = session.get("full_name") or session.get("username") or "Sotuvchi"
+        staff_id = session.get("user_id")
+        
+        # 4. returns jadvaliga yozish
+        cursor.execute("""
+            INSERT INTO returns (
+                return_number, order_id, order_number, customer_name, customer_phone,
+                return_amount, exchange_amount, difference_amount, payment_method, reason,
+                user_name, user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            return_num, order_id, order["order_number"], order["customer_name"], order["customer_phone"],
+            total_return_amount, total_exchange_amount, diff_amount, payment_method, reason,
+            staff_name, staff_id
+        ))
+        return_id = cursor.lastrowid
+        
+        # 5. QAYTARILGAN KAFELLARNI OMBORGA QAYTARISH (+ ombor qoldig'i oshadi)
+        for vr in validated_returns:
+            oi = vr["order_item"]
+            q = vr["qty"]
+            tot = vr["total_price"]
+            p_id = oi["product_id"]
+            
+            cursor.execute("SELECT quantity_in_stock FROM products WHERE id = ?", (p_id,))
+            p_curr = cursor.fetchone()
+            prev_q = float(p_curr[0]) if p_curr else 0.0
+            new_q = prev_q + q
+            
+            # Ombordagi qoldiqni oshirish (Onborga qaytadi!)
+            cursor.execute("""
+                UPDATE products SET quantity_in_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+            """, (new_q, p_id))
+            
+            # Ombor harakatlariga yozish (Kirim / Qaytarish)
+            cursor.execute("""
+                INSERT INTO stock_history (
+                    product_id, change_type, quantity_change, previous_quantity, new_quantity, reference_id, user_name, note
+                ) VALUES (?, 'qaytarish', ?, ?, ?, ?, ?, ?)
+            """, (
+                p_id, q, prev_q, new_q, return_num, staff_name,
+                f"Kafel omborga qaytarildi (Chek #{order['order_number']}, Qaytarish #{return_num}, +{q} {oi['unit']})"
+            ))
+            
+            # order_items da qaytarilgan miqdorni yangilash
+            cursor.execute("""
+                UPDATE order_items SET returned_quantity = COALESCE(returned_quantity, 0) + ? WHERE id = ?
+            """, (q, oi["id"]))
+            
+            # return_items ga yozish
+            cursor.execute("""
+                INSERT INTO return_items (
+                    return_id, product_id, item_type, brand, model_name, size, unit, quantity, unit_price, total_price, order_item_id
+                ) VALUES (?, ?, 'qaytarildi', ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                return_id, p_id, oi["brand"], oi["model_name"], oi["size"], oi["unit"], q, float(oi["unit_price"]), tot, oi["id"]
+            ))
+            
+        # 6. O'RNIGA OLINGAN YANGI MAHSULOTLARNI OMBORDAN CHIQARISH (- ombor qoldig'i kamayadi)
+        for ve in validated_exchanges:
+            p = ve["product"]
+            q = ve["qty"]
+            u_price = ve["unit_price"]
+            tot = ve["total_price"]
+            p_id = p["id"]
+            
+            cursor.execute("SELECT quantity_in_stock FROM products WHERE id = ?", (p_id,))
+            p_curr = cursor.fetchone()
+            prev_q = float(p_curr[0]) if p_curr else 0.0
+            new_q = prev_q - q
+            
+            # Ombordagi qoldiqni kamaytirish
+            cursor.execute("""
+                UPDATE products SET quantity_in_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+            """, (new_q, p_id))
+            
+            # Ombor harakatiga yozish
+            cursor.execute("""
+                INSERT INTO stock_history (
+                    product_id, change_type, quantity_change, previous_quantity, new_quantity, reference_id, user_name, note
+                ) VALUES (?, 'almashtirish_chiqim', ?, ?, ?, ?, ?, ?)
+            """, (
+                p_id, -q, prev_q, new_q, return_num, staff_name,
+                f"Qaytarilgan kafel o'rniga berildi (Qaytarish #{return_num}, Chek #{order['order_number']}, -{q} {p['unit']})"
+            ))
+            
+            # return_items ga yozish
+            cursor.execute("""
+                INSERT INTO return_items (
+                    return_id, product_id, item_type, brand, model_name, size, unit, quantity, unit_price, total_price, order_item_id
+                ) VALUES (?, ?, 'almashtirildi', ?, ?, ?, ?, ?, ?, ?, NULL)
+            """, (
+                return_id, p_id, p["brand"], p["model_name"], p["size"], p["unit"], q, u_price, tot
+            ))
+            
+        # 7. orders jadvalini yangilash
+        cursor.execute("UPDATE orders SET has_returns = 1 WHERE id = ?", (order_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        # 8. Audit log yozish
+        record_system_action(
+            action_type='tahrirladi',
+            target_type='savdo',
+            title=f"Kafel qaytarish / almashtirish: #{return_num}",
+            description=f"Chek: #{order['order_number']}, Qaytarildi: {total_return_amount:,.0f} so'm, Olingan: {total_exchange_amount:,.0f} so'm, Farq: {diff_amount:,.0f} so'm. Xodim: {staff_name}",
+            target_id=return_id
+        )
+        
+        msg = f"Kafel muvaffaqiyatli qabul qilindi va omborga qaytarildi! (Hujjat № {return_num})"
+        if validated_exchanges:
+            msg += f" O'rniga {len(validated_exchanges)} xil yangi mahsulot berildi."
+            
+        return jsonify({
+            "success": True,
+            "return_id": return_id,
+            "return_number": return_num,
+            "message": msg,
+            "return_amount": total_return_amount,
+            "exchange_amount": total_exchange_amount,
+            "diff_amount": diff_amount
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({"success": False, "message": f"Xatolik yuz berdi: {str(e)}"}), 500
+
+@app.route("/qaytarish/<int:return_id>/chek")
+@login_required
+def qaytarish_chek_print(return_id):
+    """Qaytarish va almashtirish operatsiyasining 80mm kassa cheki"""
+    conn = database.get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT r.*, o.created_at as order_created_at, o.payment_method as order_payment_method
+        FROM returns r
+        LEFT JOIN orders o ON r.order_id = o.id
+        WHERE r.id = ?
+    """, (return_id,))
+    ret = cursor.fetchone()
+    
+    if not ret:
+        conn.close()
+        return "Qaytarish hujjati topilmadi!", 404
+        
+    cursor.execute("SELECT * FROM return_items WHERE return_id = ?", (return_id,))
+    items = cursor.fetchall()
+    
+    returned_items = [dict(it) for it in items if it["item_type"] == "qaytarildi"]
+    exchanged_items = [dict(it) for it in items if it["item_type"] == "almashtirildi"]
+    
+    conn.close()
+    return render_template(
+        "qaytarish_chek_print.html",
+        ret=ret,
+        returned_items=returned_items,
+        exchanged_items=exchanged_items
+    )
+
 # ----------------- MIJOZLAR & NASIYA DAFTARI (CRM & DEBTORS) -----------------
 
 @app.route("/mijozlar", methods=["GET", "POST"])

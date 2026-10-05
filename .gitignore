@@ -25,6 +25,11 @@ test_*.db-journal
 test_*.db-wal
 test_*.db-shm
 
+# Local backups
+backup_*/
+*_backup*
+restore_backup.py
+
 # IDE & OS files
 .vscode/
 .idea/

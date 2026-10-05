@@ -205,6 +205,48 @@ def init_db():
     )
     """)
 
+    # Mahsulot qaytarish va almashtirish (Returns & Exchanges) jadvali
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS returns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        return_number TEXT UNIQUE NOT NULL,
+        order_id INTEGER NOT NULL,
+        order_number TEXT NOT NULL,
+        customer_name TEXT,
+        customer_phone TEXT,
+        return_amount REAL NOT NULL DEFAULT 0.0,
+        exchange_amount REAL NOT NULL DEFAULT 0.0,
+        difference_amount REAL NOT NULL DEFAULT 0.0,
+        payment_method TEXT DEFAULT 'naqd',
+        reason TEXT,
+        user_name TEXT,
+        user_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (order_id) REFERENCES orders(id)
+    )
+    """)
+
+    # Qaytarilgan va almashtirilgan mahsulotlar ro'yxati
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS return_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        return_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        item_type TEXT NOT NULL, -- 'qaytarildi' yoki 'almashtirildi'
+        brand TEXT NOT NULL,
+        model_name TEXT NOT NULL,
+        size TEXT NOT NULL,
+        unit TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unit_price REAL NOT NULL,
+        total_price REAL NOT NULL,
+        order_item_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (return_id) REFERENCES returns(id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+    )
+    """)
+
     # Audit va kengaytirilgan ustunlarni tekshirish va qo'shish (agar mavjud bo'lmasa)
     audit_alters = [
         ("orders", "seller_name", "TEXT"),
@@ -221,7 +263,9 @@ def init_db():
         ("order_items", "is_defect", "INTEGER DEFAULT 0"),
         ("order_items", "defect_id", "INTEGER"),
         ("orders", "usta_id", "INTEGER"),
-        ("customers", "referred_by_usta_id", "INTEGER")
+        ("customers", "referred_by_usta_id", "INTEGER"),
+        ("order_items", "returned_quantity", "REAL DEFAULT 0.0"),
+        ("orders", "has_returns", "INTEGER DEFAULT 0")
     ]
     for tbl, col, col_type in audit_alters:
         try:
@@ -319,6 +363,24 @@ def generate_order_number():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT order_number FROM orders WHERE order_number LIKE ? ORDER BY id DESC LIMIT 1", (f"{prefix}%",))
+    last = cursor.fetchone()
+    conn.close()
+    if last and last[0]:
+        try:
+            last_num = int(last[0].split("-")[-1])
+            next_num = last_num + 1
+        except Exception:
+            next_num = 1
+    else:
+        next_num = 1
+    return f"{prefix}{next_num:04d}"
+
+def generate_return_number():
+    now = datetime.now()
+    prefix = now.strftime("QYT-%y%m%d-")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT return_number FROM returns WHERE return_number LIKE ? ORDER BY id DESC LIMIT 1", (f"{prefix}%",))
     last = cursor.fetchone()
     conn.close()
     if last and last[0]:

@@ -3,6 +3,7 @@ import shutil
 import json
 import time
 import unittest
+from datetime import datetime
 
 TEST_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_kafel_isolated.db')
 PROD_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kafel_database.db')
@@ -341,7 +342,7 @@ class TestKafelAuthAndRoles(unittest.TestCase):
             "category": "transport",
             "amount": "150000",
             "description": "Labo mashinasiga yoqilgi va yetkazib berish",
-            "expense_date": "2026-09-14"
+            "expense_date": datetime.now().strftime("%Y-%m-%d")
         }, follow_redirects=True)
         self.assertEqual(r.status_code, 200)
         self.assertIn("Labo mashinasiga yoqilgi", r.data.decode("utf-8"))
