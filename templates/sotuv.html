@@ -352,40 +352,102 @@ if (typeof Html5Qrcode === "undefined") {
     </div>
 </div>
 
-<!-- SMART ROOM & TILE CALCULATOR MODAL -->
-<div id="tileCalcModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-    <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+<!-- SMART ROOM & TILE CALCULATOR MODAL (MULTI-SIZE) -->
+<div id="tileCalcModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-4 sm:p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-3.5 animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
         <!-- Modal Header -->
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-base">
+                <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-base flex-shrink-0">
                     <i class="fa-solid fa-calculator"></i>
                 </div>
                 <div>
-                    <h3 class="font-black text-slate-900 text-base leading-tight" id="calcTileTitle">Xona va Kafel Hisoblagichi</h3>
-                    <div class="flex items-center space-x-2 text-xs text-slate-400">
-                        <span id="calcTileSize">O'lcham va qutilar hisobi</span>
-                        <span id="calcTileBox" class="text-sky-600 font-semibold"></span>
+                    <h3 class="font-black text-slate-900 text-base leading-tight" id="calcTileTitle">Umumiy Kafel Hisoblagich</h3>
+                    <div class="flex items-center space-x-2 text-xs text-slate-500">
+                        <span id="calcTileSize" class="font-medium">O'lcham: 60x60 yoki tanlangan</span>
+                        <span class="text-slate-300">&bull;</span>
+                        <span id="calcTileBox" class="text-sky-600 font-bold">1 Quti: 1.44 m²</span>
                     </div>
                 </div>
             </div>
             <button onclick="closeTileCalculator()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
         </div>
 
-        <!-- Room Type Selection -->
+        <!-- Room Type Selection (Pol / Devor) -->
         <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
             <label class="cursor-pointer text-center">
-                <input type="radio" name="calcType" value="pol" checked onchange="calculateTileRequirement()" class="peer hidden">
-                <div class="py-1.5 rounded-lg peer-checked:bg-white peer-checked:shadow-xs peer-checked:text-sky-600 text-slate-600 transition">
-                    <i class="fa-solid fa-square mr-1"></i> Pol Kafel
+                <input type="radio" name="calcType" value="pol" checked onchange="toggleCalcRoomType('pol')" class="peer hidden">
+                <div class="py-1.5 rounded-lg peer-checked:bg-white peer-checked:shadow-xs peer-checked:text-sky-600 text-slate-600 transition flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-square"></i>
+                    <span>Pol Kafel</span>
                 </div>
             </label>
             <label class="cursor-pointer text-center">
-                <input type="radio" name="calcType" value="devor" onchange="calculateTileRequirement()" class="peer hidden">
-                <div class="py-1.5 rounded-lg peer-checked:bg-white peer-checked:shadow-xs peer-checked:text-sky-600 text-slate-600 transition">
-                    <i class="fa-solid fa-border-all mr-1"></i> Devor Kafel
+                <input type="radio" name="calcType" value="devor" onchange="toggleCalcRoomType('devor')" class="peer hidden">
+                <div class="py-1.5 rounded-lg peer-checked:bg-white peer-checked:shadow-xs peer-checked:text-sky-600 text-slate-600 transition flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-border-all"></i>
+                    <span>Devor Kafel</span>
                 </div>
             </label>
+        </div>
+
+        <!-- Tile Size (Razmeri) Selector Section -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2">
+            <div class="flex items-center justify-between">
+                <label class="block font-bold text-slate-700 uppercase text-[10px] tracking-wider">
+                    <i class="fa-solid fa-ruler-combined text-sky-600 mr-1"></i> Kafel Razmeri (O'lchami):
+                </label>
+                <span id="calcPieceAreaLabel" class="text-[10px] font-mono font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">1 dona: 0.36 m²</span>
+            </div>
+
+            <!-- Quick Pill Buttons for Popular Sizes -->
+            <div class="flex flex-wrap gap-1.5 text-xs font-bold" id="calcSizePills">
+                <button type="button" onclick="selectCalcSizePreset('60x60')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-sky-600 text-white border border-sky-600 shadow-2xs transition" data-size="60x60">60x60</button>
+                <button type="button" onclick="selectCalcSizePreset('60x120')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="60x120">120x60 (60x120)</button>
+                <button type="button" onclick="selectCalcSizePreset('30x60')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="30x60">30x60</button>
+                <button type="button" onclick="selectCalcSizePreset('80x80')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="80x80">80x80</button>
+                <button type="button" onclick="selectCalcSizePreset('40x40')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="40x40">40x40</button>
+                <button type="button" onclick="selectCalcSizePreset('30x90')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="30x90">30x90</button>
+                <button type="button" onclick="selectCalcSizePreset('120x20')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="120x20">120x20</button>
+                <button type="button" onclick="selectCalcSizePreset('80x160')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="80x160">80x160</button>
+                <button type="button" onclick="selectCalcSizePreset('30x30')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="30x30">30x30</button>
+                <button type="button" onclick="selectCalcSizePreset('custom')" class="calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs" data-size="custom">Boshqa...</button>
+            </div>
+
+            <!-- Custom Size Inputs (Shown when 'custom' is selected) -->
+            <div id="calcCustomSizeBlock" class="hidden grid grid-cols-3 gap-2 pt-1 border-t border-slate-200">
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Eni (sm):</label>
+                    <input type="number" id="calcCustomW" value="60" min="1" step="1" oninput="onCustomDimensionsChange()" class="w-full px-2 py-1 text-xs bg-white border border-slate-300 rounded font-mono font-bold">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Bo'yi (sm):</label>
+                    <input type="number" id="calcCustomH" value="60" min="1" step="1" oninput="onCustomDimensionsChange()" class="w-full px-2 py-1 text-xs bg-white border border-slate-300 rounded font-mono font-bold">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Qutida dona:</label>
+                    <input type="number" id="calcCustomPcs" value="4" min="1" step="1" oninput="onCustomDimensionsChange()" class="w-full px-2 py-1 text-xs bg-white border border-slate-300 rounded font-mono font-bold">
+                </div>
+            </div>
+
+            <!-- Box Specification Parameters (Editable) -->
+            <div class="grid grid-cols-3 gap-2 pt-1">
+                <div>
+                    <label class="block font-bold text-slate-600 uppercase text-[9px] mb-0.5">1 Quti maydoni (m²):</label>
+                    <input type="number" id="calcBoxSizeInput" value="1.44" step="0.01" min="0.01" oninput="calculateTileRequirement()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono font-bold text-xs focus:outline-none focus:border-sky-500">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-600 uppercase text-[9px] mb-0.5">1 Qutidagi kafel:</label>
+                    <div class="flex items-center space-x-1">
+                        <input type="number" id="calcPiecesInput" value="4" step="1" min="1" oninput="calculateTileRequirement()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono font-bold text-xs focus:outline-none focus:border-sky-500">
+                        <span class="text-[10px] text-slate-400 font-bold">dona</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-600 uppercase text-[9px] mb-0.5">1 m² Narxi (so'm):</label>
+                    <input type="number" id="calcPriceInput" value="195000" step="1000" min="0" oninput="calculateTileRequirement()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono font-bold text-xs focus:outline-none focus:border-sky-500">
+                </div>
+            </div>
         </div>
 
         <!-- Dimension Inputs -->
@@ -398,37 +460,56 @@ if (typeof Html5Qrcode === "undefined") {
                 <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Xona Eni (metr):</label>
                 <input type="number" id="calcWidth" value="3.5" step="0.1" min="0" oninput="calculateTileRequirement()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-black text-sm focus:outline-none focus:border-sky-500">
             </div>
-            <div>
-                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Balandlik (faqat devor):</label>
+            <div id="calcWallHeightBlock" class="hidden">
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Devor Balandligi (metr):</label>
                 <input type="number" id="calcHeight" value="2.8" step="0.1" min="0" oninput="calculateTileRequirement()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-black text-sm focus:outline-none focus:border-sky-500">
             </div>
-            <div>
+            <div id="calcWallMinusBlock" class="hidden">
+                <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Eshik/Deraza ayirmasi (m²):</label>
+                <input type="number" id="calcMinusArea" value="0.0" step="0.1" min="0" oninput="calculateTileRequirement()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-black text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <div class="col-span-2">
                 <label class="block font-bold text-slate-600 uppercase text-[10px] mb-1">Qirqish Zaxirasi (Zapas):</label>
                 <select id="calcWaste" onchange="calculateTileRequirement()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-xs focus:outline-none focus:border-sky-500">
                     <option value="5">+5% (To'g'ri terish)</option>
                     <option value="10" selected>+10% (Standart qirqim)</option>
                     <option value="15">+15% (Diagonal terish)</option>
+                    <option value="20">+20% (Murakkab xonalar)</option>
                 </select>
             </div>
         </div>
 
         <!-- Calculation Results Card -->
-        <div class="p-3.5 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white space-y-2 shadow-inner">
+        <div class="p-4 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white space-y-2.5 shadow-lg border border-slate-700">
             <div class="flex justify-between items-center text-xs text-slate-300">
                 <span>Sof xona maydoni:</span>
-                <span id="calcNetArea" class="font-bold text-white">0 m²</span>
+                <span id="calcNetArea" class="font-bold text-white font-mono">0.00 m²</span>
             </div>
             <div class="flex justify-between items-center text-xs text-slate-300">
-                <span>Zapas bilan hisoblangan qutilar:</span>
-                <span id="calcBoxesCount" class="font-bold text-amber-400 text-sm">0 quti</span>
+                <span>Zapas bilan hisoblangan maydon:</span>
+                <span id="calcWasteArea" class="font-bold text-slate-200 font-mono">0.00 m²</span>
             </div>
-            <div class="flex justify-between items-center text-xs text-slate-300 pt-1.5 border-t border-slate-700">
-                <span>Xarid maydoni:</span>
-                <span id="calcFinalArea" class="font-black text-emerald-400 text-base">0 m²</span>
+
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                <div class="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-center">
+                    <span class="text-[10px] uppercase font-black text-amber-300 block mb-0.5">Kerakli Qutilar:</span>
+                    <span id="calcBoxesCount" class="text-xl font-black text-amber-400 font-mono block">0 quti</span>
+                </div>
+                <div class="p-2.5 rounded-xl bg-sky-500/20 border border-sky-500/30 text-center">
+                    <span class="text-[10px] uppercase font-black text-sky-300 block mb-0.5">Jami Kafel Donasi:</span>
+                    <span id="calcTotalPieces" class="text-xl font-black text-sky-300 font-mono block">0 dona</span>
+                </div>
             </div>
-            <div class="flex justify-between items-center text-xs text-slate-300">
-                <span>Taxminiy jami summa:</span>
-                <span id="calcTotalCost" class="font-black text-white text-base">0 so'm</span>
+
+            <div class="pt-1.5 border-t border-slate-800 flex justify-between items-baseline">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Xarid Maydoni:</span>
+                    <span id="calcFinalArea" class="text-lg font-black text-emerald-400 font-mono">0.00 m²</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Taxminiy Jami Summa:</span>
+                    <span id="calcTotalCost" class="text-xl font-black text-white font-mono">0 so'm</span>
+                </div>
             </div>
         </div>
 

@@ -298,7 +298,97 @@ function updateCartUI() {
     }
 }
 
-// ---------------- SMART TILE & ROOM CALCULATOR ----------------
+// ---------------- SMART TILE & ROOM CALCULATOR (MULTI-SIZE) ----------------
+
+const TILE_SIZE_PRESETS = {
+    "60x60":  { name: "60x60 sm",  width_cm: 60, height_cm: 60,  piece_m2: 0.36, box_m2: 1.44, pcs_per_box: 4 },
+    "60x120": { name: "120x60 (60x120)", width_cm: 60, height_cm: 120, piece_m2: 0.72, box_m2: 1.44, pcs_per_box: 2 },
+    "120x60": { name: "120x60 sm", width_cm: 120, height_cm: 60, piece_m2: 0.72, box_m2: 1.44, pcs_per_box: 2 },
+    "30x60":  { name: "30x60 sm",  width_cm: 30, height_cm: 60,  piece_m2: 0.18, box_m2: 1.44, pcs_per_box: 8 },
+    "60x30":  { name: "60x30 sm",  width_cm: 60, height_cm: 30,  piece_m2: 0.18, box_m2: 1.44, pcs_per_box: 8 },
+    "80x80":  { name: "80x80 sm",  width_cm: 80, height_cm: 80,  piece_m2: 0.64, box_m2: 1.92, pcs_per_box: 3 },
+    "40x40":  { name: "40x40 sm",  width_cm: 40, height_cm: 40,  piece_m2: 0.16, box_m2: 1.44, pcs_per_box: 9 },
+    "30x30":  { name: "30x30 sm",  width_cm: 30, height_cm: 30,  piece_m2: 0.09, box_m2: 1.44, pcs_per_box: 16 },
+    "30x90":  { name: "30x90 sm",  width_cm: 30, height_cm: 90,  piece_m2: 0.27, box_m2: 1.08, pcs_per_box: 4 },
+    "120x20": { name: "120x20 sm", width_cm: 120, height_cm: 20, piece_m2: 0.24, box_m2: 1.44, pcs_per_box: 6 },
+    "80x160": { name: "80x160 sm", width_cm: 80, height_cm: 160, piece_m2: 1.28, box_m2: 2.56, pcs_per_box: 2 },
+    "20x30":  { name: "20x30 sm",  width_cm: 20, height_cm: 30,  piece_m2: 0.06, box_m2: 1.44, pcs_per_box: 24 }
+};
+
+let currentCalcSizeKey = "60x60";
+
+function selectCalcSizePreset(sizeKey) {
+    currentCalcSizeKey = sizeKey;
+    const customBlock = document.getElementById("calcCustomSizeBlock");
+    const pieceLabel = document.getElementById("calcPieceAreaLabel");
+    const boxInput = document.getElementById("calcBoxSizeInput");
+    const pcsInput = document.getElementById("calcPiecesInput");
+    const sizeEl = document.getElementById("calcTileSize");
+    const boxEl = document.getElementById("calcTileBox");
+
+    // Update Pill styles
+    document.querySelectorAll(".calc-size-pill").forEach(btn => {
+        if (btn.dataset.size === sizeKey) {
+            btn.className = "calc-size-pill px-2.5 py-1 rounded-lg bg-sky-600 text-white border border-sky-600 shadow-2xs transition";
+        } else {
+            btn.className = "calc-size-pill px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-sky-500 hover:text-sky-600 transition shadow-2xs";
+        }
+    });
+
+    if (sizeKey === "custom") {
+        if (customBlock) customBlock.classList.remove("hidden");
+        onCustomDimensionsChange();
+        return;
+    }
+
+    if (customBlock) customBlock.classList.add("hidden");
+
+    const preset = TILE_SIZE_PRESETS[sizeKey] || TILE_SIZE_PRESETS["60x60"];
+    if (boxInput) boxInput.value = preset.box_m2;
+    if (pcsInput) pcsInput.value = preset.pcs_per_box;
+    if (pieceLabel) pieceLabel.innerText = `1 dona: ${preset.piece_m2} m²`;
+    if (sizeEl) sizeEl.innerText = `O'lcham: ${preset.name}`;
+    if (boxEl) boxEl.innerText = `1 Quti: ${preset.box_m2} m² (${preset.pcs_per_box} dona)`;
+
+    calculateTileRequirement();
+}
+
+function onCustomDimensionsChange() {
+    const w = parseFloat(document.getElementById("calcCustomW")?.value) || 60;
+    const h = parseFloat(document.getElementById("calcCustomH")?.value) || 60;
+    const pcs = parseInt(document.getElementById("calcCustomPcs")?.value) || 4;
+
+    const piece_m2 = (w * h) / 10000;
+    const box_m2 = Math.round(piece_m2 * pcs * 100) / 100;
+
+    const pieceLabel = document.getElementById("calcPieceAreaLabel");
+    const boxInput = document.getElementById("calcBoxSizeInput");
+    const pcsInput = document.getElementById("calcPiecesInput");
+    const sizeEl = document.getElementById("calcTileSize");
+    const boxEl = document.getElementById("calcTileBox");
+
+    if (pieceLabel) pieceLabel.innerText = `1 dona: ${piece_m2.toFixed(3)} m²`;
+    if (boxInput) boxInput.value = box_m2;
+    if (pcsInput) pcsInput.value = pcs;
+    if (sizeEl) sizeEl.innerText = `O'lcham: ${w}x${h} sm`;
+    if (boxEl) boxEl.innerText = `1 Quti: ${box_m2} m² (${pcs} dona)`;
+
+    calculateTileRequirement();
+}
+
+function toggleCalcRoomType(type) {
+    const wallHBlock = document.getElementById("calcWallHeightBlock");
+    const wallMBlock = document.getElementById("calcWallMinusBlock");
+
+    if (type === "devor") {
+        if (wallHBlock) wallHBlock.classList.remove("hidden");
+        if (wallMBlock) wallMBlock.classList.remove("hidden");
+    } else {
+        if (wallHBlock) wallHBlock.classList.add("hidden");
+        if (wallMBlock) wallMBlock.classList.add("hidden");
+    }
+    calculateTileRequirement();
+}
 
 function openTileCalculator(product = null) {
     const modal = document.getElementById("tileCalcModal");
@@ -306,17 +396,43 @@ function openTileCalculator(product = null) {
 
     activeCalcProduct = product || currentScannedProduct;
     const titleEl = document.getElementById("calcTileTitle");
-    const sizeEl = document.getElementById("calcTileSize");
-    const boxEl = document.getElementById("calcTileBox");
+    const priceInput = document.getElementById("calcPriceInput");
 
     if (activeCalcProduct) {
         if (titleEl) titleEl.innerText = `${activeCalcProduct.brand} - ${activeCalcProduct.model_name}`;
-        if (sizeEl) sizeEl.innerText = `O'lcham: ${activeCalcProduct.size}`;
-        if (boxEl) boxEl.innerText = `1 Quti: ${activeCalcProduct.box_size_m2 || 1.44} m²`;
+        if (priceInput) priceInput.value = activeCalcProduct.price || 195000;
+
+        // Detect size key from product.size
+        const rawSize = (activeCalcProduct.size || "").toLowerCase().replace(/[\s\(\)smсм]/g, "");
+        let matchedKey = null;
+
+        for (const k in TILE_SIZE_PRESETS) {
+            if (rawSize.includes(k) || k.includes(rawSize)) {
+                matchedKey = k;
+                break;
+            }
+        }
+
+        if (matchedKey) {
+            selectCalcSizePreset(matchedKey);
+        } else {
+            selectCalcSizePreset("60x60");
+        }
+
+        if (activeCalcProduct.box_size_m2) {
+            const bInput = document.getElementById("calcBoxSizeInput");
+            if (bInput) bInput.value = activeCalcProduct.box_size_m2;
+        }
+        if (activeCalcProduct.pieces_per_box) {
+            const pInput = document.getElementById("calcPiecesInput");
+            if (pInput) pInput.value = activeCalcProduct.pieces_per_box;
+        }
     } else {
         if (titleEl) titleEl.innerText = "Umumiy Kafel Hisoblagich";
-        if (sizeEl) sizeEl.innerText = "O'lcham: 60x120 yoki tanlangan";
-        if (boxEl) boxEl.innerText = "1 Quti: 1.44 m²";
+        if (priceInput && (!priceInput.value || parseFloat(priceInput.value) <= 0)) {
+            priceInput.value = 195000;
+        }
+        selectCalcSizePreset(currentCalcSizeKey || "60x60");
     }
 
     modal.classList.remove("hidden");
@@ -336,6 +452,10 @@ function calculateTileRequirement() {
     const minusArea = parseFloat(document.getElementById("calcMinusArea")?.value) || 0;
     const wastePercent = parseFloat(document.getElementById("calcWaste")?.value) || 10;
 
+    const boxSize = parseFloat(document.getElementById("calcBoxSizeInput")?.value) || 1.44;
+    const piecesPerBox = parseInt(document.getElementById("calcPiecesInput")?.value) || 4;
+    const pricePerM2 = parseFloat(document.getElementById("calcPriceInput")?.value) || (activeCalcProduct?.price || 195000);
+
     let baseArea = 0;
     if (calcType === "pol") {
         baseArea = length * width;
@@ -345,24 +465,27 @@ function calculateTileRequirement() {
     }
 
     const withWasteArea = baseArea * (1 + (wastePercent / 100));
-    const boxSize = activeCalcProduct?.box_size_m2 || 1.44;
-    const neededBoxes = boxSize > 0 ? Math.ceil(withWasteArea / boxSize) : 0;
+    const neededBoxes = (boxSize > 0 && withWasteArea > 0) ? Math.ceil(withWasteArea / boxSize) : 0;
     const finalArea = Math.round(neededBoxes * boxSize * 100) / 100;
-    const tilePrice = activeCalcProduct?.price || 150000;
-    const totalCost = finalArea * tilePrice;
+    const totalPieces = neededBoxes * piecesPerBox;
+    const totalCost = Math.round(finalArea * pricePerM2);
 
     // Render results
     const netAreaEl = document.getElementById("calcNetArea");
+    const wasteAreaEl = document.getElementById("calcWasteArea");
     const boxesEl = document.getElementById("calcBoxesCount");
+    const piecesEl = document.getElementById("calcTotalPieces");
     const finalAreaEl = document.getElementById("calcFinalArea");
     const totalCostEl = document.getElementById("calcTotalCost");
 
     if (netAreaEl) netAreaEl.innerText = `${baseArea.toFixed(2)} m²`;
+    if (wasteAreaEl) wasteAreaEl.innerText = `${withWasteArea.toFixed(2)} m²`;
     if (boxesEl) boxesEl.innerText = `${neededBoxes} quti`;
+    if (piecesEl) piecesEl.innerText = `${totalPieces} dona`;
     if (finalAreaEl) finalAreaEl.innerText = `${finalArea.toFixed(2)} m²`;
     if (totalCostEl) totalCostEl.innerText = `${Number(totalCost).toLocaleString('ru-RU')} so'm`;
 
-    return { finalArea, neededBoxes, totalCost };
+    return { baseArea, finalArea, neededBoxes, totalPieces, totalCost };
 }
 
 function applyCalculatorResult() {
@@ -379,12 +502,12 @@ function applyCalculatorResult() {
     if (activeCalcProduct) {
         addProductToCartData(activeCalcProduct, res.finalArea);
         closeTileCalculator();
+        posNotify(`${activeCalcProduct.brand} ${activeCalcProduct.model_name}: ${res.finalArea} m² (${res.neededBoxes} quti, ${res.totalPieces} dona) savatga qo'shildi!`, "success");
     } else {
-        // Just set the manual qty
         const addQty = document.getElementById("addQtyInput");
         if (addQty) addQty.value = res.finalArea;
         closeTileCalculator();
-        posNotify(`Hisoblangan ${res.finalArea} m² kiritildi. Kafelni tanlang va qo'shing.`, "info");
+        posNotify(`Hisoblangan: ${res.finalArea} m² (${res.neededBoxes} quti, ${res.totalPieces} dona). Kafelni tanlang va savatga qo'shing.`, "info");
     }
 }
 
