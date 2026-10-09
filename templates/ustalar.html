@@ -21,7 +21,7 @@
                 Do'konga mijoz olib keluvchi ustalarni kiritish, aloqa ma'lumotlarini boshqarish va KPI reytingini kuzatish
             </p>
         </div>
-        <div class="flex items-center space-x-2">
+        <div class="page-actions flex flex-wrap items-center gap-2 sm:gap-2.5 md:justify-end flex-shrink-0">
             <a href="/export/excel/ustalar" class="inline-flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-3.5 py-2.5 rounded-2xl border border-emerald-300 shadow-sm transition text-xs" title="Ustalarni Excelga (.xlsx) yuklash">
                 <i class="fa-solid fa-file-excel text-emerald-600"></i>
                 <span>Excelga yuklash</span>
@@ -186,7 +186,7 @@
                                             <a href="/kpi?period=all" class="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 transition" title="KPI reytingini ko'rish">
                                                 <i class="fa-solid fa-trophy text-xs"></i>
                                             </a>
-                                            <button type="button" onclick="confirmDeleteUsta({{ u.id }}, '{{ u.full_name }}')" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition" title="O'chirish">
+                                            <button type="button" onclick="confirmDeleteUsta({{ u.id }}, {{ (u.full_name)|tojson|forceescape }})" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition" title="O'chirish">
                                                 <i class="fa-solid fa-trash-can text-xs"></i>
                                             </button>
                                         </div>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>{% block title %}KafelCenter{% endblock %} - Kafel Savdo & Ombor Tizimi</title>
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -30,7 +30,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Chart.js for interactive analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/style.css">
     {% block head_extra %}{% endblock %}
@@ -71,11 +71,11 @@
                     <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                         Asosiy Boshqaruv
                     </div>
-                    <a href="/" title="Boshqaruv Paneli" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/' %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/" title="Boshqaruv Paneli" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/' %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-chart-pie text-base w-5 text-center {% if request.path == '/' %}text-white{% else %}text-sky-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Boshqaruv</span>
                     </a>
-                    <a href="/kpi" title="Xodimlar KPI & Reyting" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/kpi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/kpi" title="Xodimlar KPI & Reyting" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/kpi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-trophy text-base w-5 text-center {% if request.path.startswith('/kpi') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text flex-1">KPI & Reyting</span>
                         <span class="sidebar-badge text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Top</span>
@@ -87,15 +87,15 @@
                     <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                         Savdo & Kassa
                     </div>
-                    <a href="/sotuv" title="Sotuv & Kassa (POS)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/sotuv', '/kassa'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/sotuv" title="Sotuv & Kassa (POS)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/sotuv', '/kassa'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-cash-register text-base w-5 text-center {% if request.path in ['/sotuv', '/kassa'] %}text-white{% else %}text-emerald-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Sotuv & Kassa (POS)</span>
                     </a>
-                    <a href="/qaytarish" title="Kafel Qaytarish & Almashtirish (20 kun)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/qaytarish') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/qaytarish" title="Kafel Qaytarish & Almashtirish (20 kun)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/qaytarish') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-rotate-left text-base w-5 text-center {% if request.path.startswith('/qaytarish') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Qaytarish (20 kun)</span>
                     </a>
-                    <a href="/mijozlar" title="Mijozlar & Nasiya Daftari" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/mijozlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/mijozlar" title="Mijozlar & Nasiya Daftari" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/mijozlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-users-viewfinder text-base w-5 text-center {% if request.path.startswith('/mijozlar') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Mijozlar & Nasiya</span>
                     </a>
@@ -106,23 +106,23 @@
                     <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                         Ombor & Logistika
                     </div>
-                    <a href="/ombor" title="Ombor Qoldig'i" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/ombor" title="Ombor Qoldig'i" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-boxes-stacked text-base w-5 text-center {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}text-white{% else %}text-indigo-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Ombor Qoldig'i</span>
                     </a>
-                    <a href="/ombor/yangi" title="Yangi Kafel Kirim Qilish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/yangi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/ombor/yangi" title="Yangi Kafel Kirim Qilish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/yangi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-square-plus text-base w-5 text-center {% if request.path.startswith('/ombor/yangi') %}text-white{% else %}text-teal-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Kafel Kirim Qilish</span>
                     </a>
-                    <a href="/ombor/siniqlar" title="Siniqlar & Brak Kafellar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/siniqlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/ombor/siniqlar" title="Siniqlar & Brak Kafellar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/siniqlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-heart-crack text-base w-5 text-center {% if request.path.startswith('/ombor/siniqlar') %}text-white{% else %}text-rose-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Siniqlar & Brak</span>
                     </a>
-                    <a href="/zavodlar" title="Kafel Zavodlari & Markalar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/zavodlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/zavodlar" title="Kafel Zavodlari & Markalar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/zavodlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-industry text-base w-5 text-center {% if request.path.startswith('/zavodlar') %}text-white{% else %}text-cyan-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Zavodlar & Markalar</span>
                     </a>
-                    <a href="/nakladnoylar" title="Nakladnoylar & Chiqarish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/nakladnoy') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/nakladnoylar" title="Nakladnoylar & Chiqarish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/nakladnoy') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-file-invoice text-base w-5 text-center {% if request.path.startswith('/nakladnoy') %}text-white{% else %}text-blue-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text flex-1">Nakladnoylar</span>
                         {% if pending_nakladnoy_count and pending_nakladnoy_count > 0 %}
@@ -138,19 +138,19 @@
                     <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                         Tizim Nazorati
                     </div>
-                    <a href="/xarajatlar" title="Do'kon Xarajatlari & Chiqimlar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/xarajatlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/xarajatlar" title="Do'kon Xarajatlari & Chiqimlar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/xarajatlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-receipt text-base w-5 text-center {% if request.path.startswith('/xarajatlar') %}text-white{% else %}text-rose-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Do'kon Xarajatlari</span>
                     </a>
-                    <a href="/hisobot" title="Audit & To'liq Hisobot" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/hisobot" title="Audit & To'liq Hisobot" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-shield-halved text-base w-5 text-center {% if request.path in ['/hisobot', '/tarix'] %}text-white{% else %}text-purple-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Audit & Hisobot</span>
                     </a>
-                    <a href="/admin/xodimlar" title="Xodimlar & Rollar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/admin/xodimlar' %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/admin/xodimlar" title="Xodimlar & Rollar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/admin/xodimlar' %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-users-gear text-base w-5 text-center {% if request.path == '/admin/xodimlar' %}text-white{% else %}text-pink-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Xodimlar</span>
                     </a>
-                    <a href="/admin/ustalar" title="Ustalar & Prorablar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/admin/ustalar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/admin/ustalar" title="Ustalar & Prorablar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/admin/ustalar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-helmet-safety text-base w-5 text-center {% if request.path.startswith('/admin/ustalar') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Ustalar</span>
                     </a>
@@ -163,11 +163,11 @@
                     <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                         Savdo Operatsiyalari
                     </div>
-                    <a href="/sotuv" title="Sotuv & Kassa (POS)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/sotuv', '/kassa'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/sotuv" title="Sotuv & Kassa (POS)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/sotuv', '/kassa'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-cash-register text-base w-5 text-center {% if request.path in ['/sotuv', '/kassa'] %}text-white{% else %}text-emerald-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text font-bold">Sotuv & Kassa (POS)</span>
                     </a>
-                    <a href="/qaytarish" title="Kafel Qaytarish & Almashtirish (20 kun)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/qaytarish') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/qaytarish" title="Kafel Qaytarish & Almashtirish (20 kun)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/qaytarish') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-rotate-left text-base w-5 text-center {% if request.path.startswith('/qaytarish') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text font-bold">Qaytarish (20 kun)</span>
                     </a>
@@ -178,11 +178,11 @@
                     <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                         Mening Natijalarim
                     </div>
-                    <a href="/kpi" title="Mening KPI & Bonusim" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/kpi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/kpi" title="Mening KPI & Bonusim" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/kpi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-trophy text-base w-5 text-center {% if request.path.startswith('/kpi') %}text-white{% else %}text-amber-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text flex-1">Mening KPI & Bonus</span>
                     </a>
-                    <a href="/hisobot" title="Mening Savdo Tarixim" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/hisobot" title="Mening Savdo Tarixim" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-clock-rotate-left text-base w-5 text-center {% if request.path in ['/hisobot', '/tarix'] %}text-white{% else %}text-purple-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Savdo Tarixi</span>
                     </a>
@@ -195,23 +195,23 @@
                     <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                         Ombor & Yuk Tashish
                     </div>
-                    <a href="/ombor" title="Ombor Qoldig'i" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/ombor" title="Ombor Qoldig'i" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-boxes-stacked text-base w-5 text-center {% if request.path == '/ombor' or (request.path.startswith('/ombor/') and not request.path.startswith('/ombor/yangi') and not request.path.startswith('/ombor/siniqlar')) %}text-white{% else %}text-indigo-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Ombor Qoldig'i</span>
                     </a>
-                    <a href="/ombor/yangi" title="Yangi Kafel Kirim Qilish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/yangi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/ombor/yangi" title="Yangi Kafel Kirim Qilish" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/yangi') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-square-plus text-base w-5 text-center {% if request.path.startswith('/ombor/yangi') %}text-white{% else %}text-teal-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Kafel Kirim Qilish</span>
                     </a>
-                    <a href="/ombor/siniqlar" title="Siniqlar & Brak Kafellar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/siniqlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/ombor/siniqlar" title="Siniqlar & Brak Kafellar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/ombor/siniqlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-heart-crack text-base w-5 text-center {% if request.path.startswith('/ombor/siniqlar') %}text-white{% else %}text-rose-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Siniqlar & Brak</span>
                     </a>
-                    <a href="/zavodlar" title="Kafel Zavodlari & Markalar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/zavodlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/zavodlar" title="Kafel Zavodlari & Markalar" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/zavodlar') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-industry text-base w-5 text-center {% if request.path.startswith('/zavodlar') %}text-white{% else %}text-cyan-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Zavodlar & Markalar</span>
                     </a>
-                    <a href="/nakladnoylar" title="Nakladnoylar (Yuk Berish)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/nakladnoy') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/nakladnoylar" title="Nakladnoylar (Yuk Berish)" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path.startswith('/nakladnoy') %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-file-invoice text-base w-5 text-center {% if request.path.startswith('/nakladnoy') %}text-white{% else %}text-blue-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text flex-1">Nakladnoylar</span>
                         {% if pending_nakladnoy_count and pending_nakladnoy_count > 0 %}
@@ -227,7 +227,7 @@
                     <div class="sidebar-heading px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                         Jurnal & Hisobot
                     </div>
-                    <a href="/hisobot" title="Kirim-Chiqim Jurnali" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 border-l-4 border-white{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
+                    <a href="/hisobot" title="Kirim-Chiqim Jurnali" class="sidebar-nav-item flex items-center space-x-2.5 px-2.5 py-1.5 rounded-xl text-sm transition group {% if request.path in ['/hisobot', '/tarix'] %}bg-gradient-to-r from-sky-600 to-blue-600 text-white font-bold shadow-md shadow-sky-600/30 ring-1 ring-white/10{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium{% endif %}">
                         <i class="fa-solid fa-clipboard-list text-base w-5 text-center {% if request.path in ['/hisobot', '/tarix'] %}text-white{% else %}text-emerald-400 group-hover:scale-110 transition-transform{% endif %}"></i>
                         <span class="sidebar-text">Kirim-Chiqim Jurnali</span>
                     </a>
@@ -299,6 +299,17 @@
                             <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
                             <span>Zavodlar & Ishlab Chiqaruvchi Markalar</span>
                         </div>
+                    {% elif request.path.startswith('/ombor/siniqlar') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                            <span>Siniqlar & Brak Kafellar</span>
+                        </div>
+                    {% elif request.path.startswith('/ombor/tahrirlash') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <a href="/ombor" class="text-slate-400 hover:text-slate-600 transition">Ombor</a>
+                            <span class="text-slate-300">/</span>
+                            <span>Kafelni Tahrirlash</span>
+                        </div>
                     {% elif request.path.startswith('/ombor') %}
                         <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
                             <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
@@ -308,6 +319,21 @@
                         <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
                             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                             <span>Sotuv & Kassa (POS)</span>
+                        </div>
+                    {% elif request.path.startswith('/qaytarish') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span>Qaytarish & Almashtirish</span>
+                        </div>
+                    {% elif request.path.startswith('/mijozlar') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                            <span>Mijozlar & Nasiya Daftari</span>
+                        </div>
+                    {% elif request.path.startswith('/xarajatlar') %}
+                        <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
+                            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                            <span>Do'kon Xarajatlari</span>
                         </div>
                     {% elif request.path.startswith('/nakladnoy') %}
                         <div class="flex items-center space-x-2 text-sm font-bold text-slate-800">
@@ -564,6 +590,17 @@
             });
         })();
 
+        // XSS himoyasi: foydalanuvchi kiritgan matnni innerHTML ga qo'yishdan oldin ekranlash
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        // onclick="fn(${jsArg(x)})" ichida xavfsiz JS satr argumenti
+        function jsArg(value) {
+            return escapeHtml(JSON.stringify(String(value == null ? '' : value)));
+        }
+
         // Global Toast Notification Helper
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
@@ -588,12 +625,14 @@
             };
 
             const toast = document.createElement('div');
-            toast.className = `toast-item toast-${type}`;
+            toast.className = `toast-item toast-${icons[type] ? type : 'info'}`;
             toast.innerHTML = `
                 <i class="fa-solid ${icons[type] || icons.info} text-base flex-shrink-0"></i>
-                <span class="flex-1">${message}</span>
+                <span class="flex-1"></span>
                 <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white transition ml-2 font-bold text-base leading-none">&times;</button>
             `;
+            // Xabar matn sifatida qo'yiladi (mahsulot/mijoz nomidagi HTML bajarilmaydi)
+            toast.querySelector('span').textContent = message;
 
             container.appendChild(toast);
 

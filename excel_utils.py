@@ -165,6 +165,12 @@ def create_styled_excel(
                 cell.value = str(val)
                 cell.alignment = Alignment(horizontal="left", vertical="center")
 
+            # Formula injection himoyasi: mijoz ismi "=HYPERLINK(...)" kabi bo'lsa,
+            # Excel uni formula sifatida bajarmasligi uchun oddiy matn deb belgilaymiz
+            if isinstance(cell.value, str) and cell.value[:1] in ("=", "+", "-", "@"):
+                cell.data_type = "s"
+                cell.quotePrefix = True
+
         ws.row_dimensions[current_row].height = 20
         current_row += 1
 

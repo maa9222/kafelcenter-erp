@@ -7,12 +7,18 @@
     <!-- Favicon & Icons -->
     <link rel="icon" type="image/png" href="/static/img/favicon.png">
     <link rel="shortcut icon" href="/static/img/favicon.ico">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-md space-y-6">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 relative overflow-x-hidden">
+    <!-- Decorative background: soft glows + faint tile grid -->
+    <div class="pointer-events-none fixed inset-0 -z-0" aria-hidden="true">
+        <div class="absolute -top-40 -left-32 w-[32rem] h-[32rem] rounded-full bg-sky-600/20 blur-[120px]"></div>
+        <div class="absolute -bottom-48 -right-32 w-[34rem] h-[34rem] rounded-full bg-indigo-600/20 blur-[120px]"></div>
+        <div class="absolute inset-0 opacity-[0.07]" style="background-image: linear-gradient(rgba(148,163,184,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.6) 1px, transparent 1px); background-size: 56px 56px; mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%); -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);"></div>
+    </div>
+    <div class="w-full max-w-md space-y-6 relative z-10">
         <!-- Logo -->
         <div class="text-center space-y-1">
             <img src="/static/img/logo_dark.png" alt="Kafel Center Logo" class="h-28 mx-auto object-contain drop-shadow-2xl mb-1 hover:scale-105 transition transform duration-300">
@@ -20,7 +26,7 @@
         </div>
 
         <!-- Login Card -->
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-7 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div class="bg-slate-900/70 border border-slate-700/60 rounded-3xl p-7 sm:p-8 shadow-2xl shadow-black/40 backdrop-blur-xl ring-1 ring-white/5">
             <div class="mb-6">
                 <h2 class="text-xl font-black text-white">Tizimga Kirish</h2>
                 <p class="text-xs text-slate-400 mt-1">Davom etish uchun login va parolingizni kiriting</p>
@@ -56,7 +62,7 @@
                         Login (Foydalanuvchi nomi)
                     </label>
                     <div class="relative">
-                        <input type="text" name="username" id="loginUsername" required placeholder="admin, sotuvchi yoki omborchi" class="w-full pl-10 pr-4 py-3 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition font-medium">
+                        <input type="text" name="username" id="loginUsername" required placeholder="Foydalanuvchi nomingiz" autocomplete="username" autofocus class="w-full pl-10 pr-4 py-3 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition font-medium">
                         <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
                     </div>
                 </div>
@@ -67,7 +73,7 @@
                         Parol
                     </label>
                     <div class="relative">
-                        <input type="password" name="password" id="loginPassword" required placeholder="••••••••" class="w-full pl-10 pr-10 py-3 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition font-medium">
+                        <input type="password" name="password" id="loginPassword" required placeholder="••••••••" autocomplete="current-password" class="w-full pl-10 pr-10 py-3 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition font-medium">
                         <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
                         <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300">
                             <i id="eyeIcon" class="fa-solid fa-eye text-sm"></i>

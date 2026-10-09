@@ -245,18 +245,18 @@ function updateCartUI() {
         html += `
         <div class="p-2.5 rounded-xl ${item.is_defect ? 'bg-rose-50/60 border border-rose-200' : 'bg-slate-50/80 border border-slate-200'} flex items-center justify-between gap-2.5 hover:border-slate-300 transition shadow-2xs">
             <div class="flex items-center space-x-2.5 overflow-hidden min-w-0">
-                <div class="w-11 h-11 rounded-lg bg-white overflow-hidden border border-slate-200 flex-shrink-0 relative flex items-center justify-center p-0.5 shadow-2xs cursor-pointer" onclick="openTileImageModal('${item.image_path || '/static/placeholder-tile.png'}')">
-                    <img src="${item.image_path || '/static/placeholder-tile.png'}" class="max-h-full max-w-full object-contain rounded">
+                <div class="w-11 h-11 rounded-lg bg-white overflow-hidden border border-slate-200 flex-shrink-0 relative flex items-center justify-center p-0.5 shadow-2xs cursor-pointer" onclick="openTileImageModal(${jsArg(item.image_path || '/static/placeholder-tile.png')})">
+                    <img src="${escapeHtml(item.image_path || '/static/placeholder-tile.png')}" class="max-h-full max-w-full object-contain rounded">
                     ${item.is_defect ? '<span class="absolute bottom-0 inset-x-0 bg-rose-600 text-white text-[7px] font-black text-center uppercase">Brak</span>' : ''}
                 </div>
                 <div class="overflow-hidden min-w-0">
                     <div class="flex items-center space-x-1">
-                        <span class="text-[9px] font-black uppercase text-sky-600 tracking-wider truncate">${item.brand}</span>
+                        <span class="text-[9px] font-black uppercase text-sky-600 tracking-wider truncate">${escapeHtml(item.brand)}</span>
                         ${item.is_defect ? '<span class="text-[8px] font-bold uppercase bg-rose-100 text-rose-700 px-1 rounded">Siniq</span>' : ''}
                     </div>
-                    <h4 class="font-bold text-xs text-slate-800 truncate">${item.model_name}</h4>
+                    <h4 class="font-bold text-xs text-slate-800 truncate">${escapeHtml(item.model_name)}</h4>
                     <div class="text-[10px] text-slate-500 font-medium flex items-center space-x-1.5 truncate">
-                        <span>${item.size}</span>
+                        <span>${escapeHtml(item.size)}</span>
                         <span>&bull;</span>
                         <b class="${item.is_defect ? 'text-rose-700 font-black' : 'text-slate-800 font-bold'}">${Number(item.price).toLocaleString('ru-RU')} s.</b>
                         <span>&bull;</span>
@@ -619,12 +619,12 @@ function renderCatalogCards(products) {
         const isOutOfStock = p.quantity_in_stock <= 0;
         const boxSize = p.box_size_m2 || 1.44;
         const imgHtml = p.image_path
-            ? `<img src="${p.image_path}" class="max-h-full max-w-full object-contain rounded transition group-hover:scale-105 duration-200" alt="${p.model_name}">`
+            ? `<img src="${escapeHtml(p.image_path)}" class="max-h-full max-w-full object-contain rounded transition group-hover:scale-105 duration-200" alt="${escapeHtml(p.model_name)}">`
             : `<div class="flex flex-col items-center justify-center text-slate-400 select-none py-2">
                    <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 mb-1 shadow-2xs group-hover:text-sky-600 transition">
                        <i class="fa-solid fa-shapes text-base"></i>
                    </div>
-                   <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${p.brand}</span>
+                   <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${escapeHtml(p.brand)}</span>
                </div>`;
 
         html += `
@@ -633,15 +633,15 @@ function renderCatalogCards(products) {
                 <div class="relative h-28 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden mb-2 cursor-pointer flex items-center justify-center p-1" onclick="selectProductFromCatalog(${JSON.stringify(p).replace(/"/g, '&quot;')})">
                     ${imgHtml}
                     <span class="absolute top-1.5 left-1.5 bg-white/95 backdrop-blur-xs text-slate-800 border border-slate-200/80 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-2xs">
-                        ${p.brand}
+                        ${escapeHtml(p.brand)}
                     </span>
                     <span class="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-2 py-0.5 rounded shadow-2xs ${isOutOfStock ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'}">
-                        ${p.quantity_in_stock} ${p.unit}
+                        ${p.quantity_in_stock} ${escapeHtml(p.unit)}
                     </span>
                 </div>
-                <h4 class="font-bold text-xs text-slate-900 leading-tight truncate cursor-pointer group-hover:text-sky-600 transition" title="${p.brand} ${p.model_name}" onclick="selectProductFromCatalog(${JSON.stringify(p).replace(/"/g, '&quot;')})">${p.model_name}</h4>
+                <h4 class="font-bold text-xs text-slate-900 leading-tight truncate cursor-pointer group-hover:text-sky-600 transition" title="${escapeHtml(p.brand)} ${escapeHtml(p.model_name)}" onclick="selectProductFromCatalog(${JSON.stringify(p).replace(/"/g, '&quot;')})">${escapeHtml(p.model_name)}</h4>
                 <div class="flex items-center justify-between mt-1 text-[11px]">
-                    <span class="font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">${p.size}</span>
+                    <span class="font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">${escapeHtml(p.size)}</span>
                     <span class="font-black text-slate-900 text-xs">${Number(p.price).toLocaleString('ru-RU')} <span class="text-[10px] font-normal text-slate-500">so'm</span></span>
                 </div>
             </div>
@@ -717,10 +717,10 @@ async function loadDefectsCatalog() {
             const discPrice = Number(d.discounted_price) || 0;
             const discountPct = origPrice > 0 ? Math.max(5, Math.round((1 - (discPrice / origPrice)) * 100)) : 50;
             const imgHtml = d.image_path
-                ? `<img src="${d.image_path}" class="max-h-full max-w-full object-contain rounded transition group-hover:scale-105 duration-200">`
+                ? `<img src="${escapeHtml(d.image_path)}" class="max-h-full max-w-full object-contain rounded transition group-hover:scale-105 duration-200">`
                 : `<div class="flex flex-col items-center justify-center text-rose-400 select-none py-2">
                        <i class="fa-solid fa-heart-crack text-2xl mb-1 text-rose-300"></i>
-                       <span class="text-[10px] font-bold text-rose-700 uppercase">${d.brand}</span>
+                       <span class="text-[10px] font-bold text-rose-700 uppercase">${escapeHtml(d.brand)}</span>
                    </div>`;
 
             html += `
@@ -732,19 +732,19 @@ async function loadDefectsCatalog() {
                     <div class="relative h-28 rounded-xl bg-slate-900/5 overflow-hidden mb-2 border border-rose-100 flex items-center justify-center p-1 cursor-pointer" onclick='selectProductFromCatalog(${JSON.stringify(d).replace(/'/g, "&apos;")})'>
                         ${imgHtml}
                         <span class="absolute top-1.5 left-1.5 bg-white/95 text-slate-800 border border-slate-200 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-2xs">
-                            ${d.brand}
+                            ${escapeHtml(d.brand)}
                         </span>
                         <span class="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-2 py-0.5 rounded shadow-2xs bg-rose-600 text-white">
-                            💔 ${d.quantity} ${d.unit}
+                            💔 ${d.quantity} ${escapeHtml(d.unit)}
                         </span>
                     </div>
                     <div class="flex items-center space-x-1 mb-0.5">
                         <span class="text-[9px] font-black uppercase bg-rose-100 text-rose-700 px-1 rounded">💔 Siniq</span>
-                        <span class="text-[9px] text-slate-400 truncate" title="${d.reason}">${d.reason}</span>
+                        <span class="text-[9px] text-slate-400 truncate" title="${escapeHtml(d.reason)}">${escapeHtml(d.reason)}</span>
                     </div>
-                    <h4 class="font-bold text-xs text-slate-900 leading-tight truncate cursor-pointer group-hover:text-rose-600 transition" title="${d.brand} ${d.model_name}" onclick='selectProductFromCatalog(${JSON.stringify(d).replace(/'/g, "&apos;")})'>${d.model_name}</h4>
+                    <h4 class="font-bold text-xs text-slate-900 leading-tight truncate cursor-pointer group-hover:text-rose-600 transition" title="${escapeHtml(d.brand)} ${escapeHtml(d.model_name)}" onclick='selectProductFromCatalog(${JSON.stringify(d).replace(/'/g, "&apos;")})'>${escapeHtml(d.model_name)}</h4>
                     <div class="mt-1 flex items-baseline justify-between text-[11px]">
-                        <span class="font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">${d.size}</span>
+                        <span class="font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">${escapeHtml(d.size)}</span>
                         <div class="text-right">
                             <del class="text-[9px] text-slate-400 block">${origPrice.toLocaleString('ru-RU')} s.</del>
                             <span class="font-black text-rose-600 text-xs">${discPrice.toLocaleString('ru-RU')} s.</span>
@@ -905,22 +905,22 @@ function renderKassaPage() {
         <tr class="hover:bg-slate-50 transition">
             <td class="py-2.5 px-2 flex items-center space-x-2">
                 <div class="w-8 h-8 rounded-lg bg-white overflow-hidden border border-slate-200 flex-shrink-0 relative flex items-center justify-center p-0.5">
-                    <img src="${item.image_path || '/static/placeholder-tile.png'}" class="max-h-full max-w-full object-contain">
+                    <img src="${escapeHtml(item.image_path || '/static/placeholder-tile.png')}" class="max-h-full max-w-full object-contain">
                     ${item.is_defect ? '<span class="absolute bottom-0 inset-x-0 bg-rose-600 text-white text-[7px] font-black text-center uppercase leading-tight">Brak</span>' : ''}
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center space-x-1">
-                        <span class="text-[9px] font-black uppercase text-sky-600 truncate">${item.brand}</span>
+                        <span class="text-[9px] font-black uppercase text-sky-600 truncate">${escapeHtml(item.brand)}</span>
                         ${item.is_defect ? '<span class="text-[8px] font-black uppercase bg-rose-100 text-rose-700 px-1 rounded">💔 Siniq</span>' : ''}
                     </div>
-                    <h4 class="font-bold text-xs text-slate-800 truncate">${item.model_name}</h4>
-                    <span class="text-[9px] text-slate-400 font-mono">${item.size}</span>
+                    <h4 class="font-bold text-xs text-slate-800 truncate">${escapeHtml(item.model_name)}</h4>
+                    <span class="text-[9px] text-slate-400 font-mono">${escapeHtml(item.size)}</span>
                 </div>
             </td>
             <td class="py-2.5 px-2 text-center whitespace-nowrap">
                 <div class="inline-flex items-center bg-slate-100 rounded-lg p-0.5">
                     <button onclick="updateCartItemByIndex(${index}, -1)" class="w-4 h-4 rounded hover:bg-white text-xs font-bold text-slate-700">-</button>
-                    <span class="px-1.5 font-mono font-bold text-xs text-slate-900">${item.qty} ${item.unit}</span>
+                    <span class="px-1.5 font-mono font-bold text-xs text-slate-900">${item.qty} ${escapeHtml(item.unit)}</span>
                     <button onclick="updateCartItemByIndex(${index}, 1)" class="w-4 h-4 rounded hover:bg-white text-xs font-bold text-slate-700">+</button>
                 </div>
             </td>
@@ -1043,10 +1043,10 @@ function searchCustomersForKassa(query) {
                 let html = "";
                 data.customers.forEach(c => {
                     html += `
-                    <div onclick="selectCustomerForKassa(${c.id}, '${c.full_name.replace(/'/g, "\\'")}', '${c.phone || ''}', ${c.balance_debt})" class="p-2.5 hover:bg-amber-50 cursor-pointer flex justify-between items-center transition">
+                    <div onclick="selectCustomerForKassa(${Number(c.id)}, ${jsArg(c.full_name)}, ${jsArg(c.phone || '')}, ${Number(c.balance_debt) || 0})" class="p-2.5 hover:bg-amber-50 cursor-pointer flex justify-between items-center transition">
                         <div>
-                            <span class="font-bold text-slate-800">${c.full_name}</span>
-                            <span class="text-[10px] text-slate-400 block">${c.phone || 'Tel kiritilmagan'} &bull; ${c.customer_type}</span>
+                            <span class="font-bold text-slate-800">${escapeHtml(c.full_name)}</span>
+                            <span class="text-[10px] text-slate-400 block">${escapeHtml(c.phone || 'Tel kiritilmagan')} &bull; ${escapeHtml(c.customer_type)}</span>
                         </div>
                         <div class="text-right">
                             <span class="text-[10px] font-bold ${c.balance_debt > 0 ? 'text-rose-600' : 'text-emerald-600'}">
@@ -1108,10 +1108,10 @@ function searchUstalarForKassa(query) {
                 let html = "";
                 data.ustalar.forEach(u => {
                     html += `
-                    <div onclick="selectUstaForKassa(${u.id}, '${u.full_name.replace(/'/g, "\\'")}', '${u.phone || ''}')" class="p-2.5 hover:bg-amber-50 cursor-pointer flex justify-between items-center transition">
+                    <div onclick="selectUstaForKassa(${Number(u.id)}, ${jsArg(u.full_name)}, ${jsArg(u.phone || '')})" class="p-2.5 hover:bg-amber-50 cursor-pointer flex justify-between items-center transition">
                         <div>
-                            <span class="font-bold text-slate-800 text-xs">👷 ${u.full_name}</span>
-                            <span class="text-[10px] text-slate-400 block">${u.phone || 'Tel kiritilmagan'} &bull; ${u.customer_type}</span>
+                            <span class="font-bold text-slate-800 text-xs">👷 ${escapeHtml(u.full_name)}</span>
+                            <span class="text-[10px] text-slate-400 block">${escapeHtml(u.phone || 'Tel kiritilmagan')} &bull; ${escapeHtml(u.customer_type)}</span>
                         </div>
                         <span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">Tanlash</span>
                     </div>

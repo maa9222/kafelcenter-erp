@@ -224,7 +224,7 @@
                                     <input type="file" name="image" id="imageInput" accept="image/*" class="hidden" onchange="previewImage(this)">
                                 </label>
                                 {% if product.image_path %}
-                                <button type="button" onclick="openImageModal('{{ product.image_path }}')" class="bg-cyan-50 hover:bg-cyan-100 text-cyan-700 font-bold text-xs py-2 px-3 rounded-lg transition border border-cyan-200 inline-flex items-center space-x-1.5">
+                                <button type="button" onclick="openImageModal({{ (product.image_path)|tojson|forceescape }})" class="bg-cyan-50 hover:bg-cyan-100 text-cyan-700 font-bold text-xs py-2 px-3 rounded-lg transition border border-cyan-200 inline-flex items-center space-x-1.5">
                                     <i class="fa-solid fa-expand"></i>
                                     <span>To'liq ko'rish</span>
                                 </button>

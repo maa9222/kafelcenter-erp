@@ -20,7 +20,7 @@
             </p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2.5 relative z-10">
+        <div class="page-actions flex flex-wrap items-center gap-2 sm:gap-2.5 md:justify-end flex-shrink-0 relative z-10">
             <a href="/kpi" class="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-4 py-2.5 rounded-2xl shadow-lg shadow-amber-500/25 transition transform hover:-translate-y-0.5 text-xs sm:text-sm">
                 <i class="fa-solid fa-trophy text-base text-slate-900"></i>
                 <span>Xodimlar KPI</span>
@@ -119,8 +119,12 @@
                     Jonli hisobot
                 </span>
             </div>
-            <div class="h-64 sm:h-72 w-full">
+            <div class="h-64 sm:h-72 w-full relative">
                 <canvas id="salesChart"></canvas>
+                <div id="salesChartEmpty" class="chart-empty hidden">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Oxirgi 7 kunda savdo bo'lmagan</span>
+                </div>
             </div>
         </div>
 
@@ -136,6 +140,9 @@
                 <p class="text-xs text-slate-400 mb-4">Naqd pul va karta orqali to'lovlar nisbati</p>
                 <div class="h-48 relative flex items-center justify-center">
                     <canvas id="paymentChart"></canvas>
+                    <div id="paymentChartEmpty" class="chart-empty hidden">
+                        <span>Hozircha to'lovlar yo'q</span>
+                    </div>
                 </div>
             </div>
 
@@ -347,6 +354,10 @@
     const salesLabels = {{ sales_chart_labels|tojson }};
     const salesData = {{ sales_chart_data|tojson }};
     
+    if (!salesData.some(v => Number(v) > 0)) {
+        document.getElementById('salesChartEmpty').classList.remove('hidden');
+    }
+
     const ctxSales = document.getElementById('salesChart').getContext('2d');
     const salesGradient = ctxSales.createLinearGradient(0, 0, 0, 300);
     salesGradient.addColorStop(0, 'rgba(2, 132, 199, 0.35)');
@@ -410,6 +421,10 @@
     const kartaVal = {{ payment_stats.karta }};
     const hasData = (naqdVal + kartaVal) > 0;
 
+    if (!hasData) {
+        document.getElementById('paymentChartEmpty').classList.remove('hidden');
+    }
+
     const ctxPay = document.getElementById('paymentChart').getContext('2d');
     new Chart(ctxPay, {
         type: 'doughnut',
@@ -430,6 +445,7 @@
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    enabled: hasData,
                     callbacks: {
                         label: function(context) {
                             return ' ' + Number(context.raw).toLocaleString('ru-RU') + " so'm";

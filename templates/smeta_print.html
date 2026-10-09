@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="/static/img/favicon.png">
     <link rel="shortcut icon" href="/static/img/favicon.ico">
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
@@ -182,6 +182,10 @@
 
     <!-- Script to render from localStorage -->
     <script>
+        function esc(v) {
+            return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
         document.addEventListener("DOMContentLoaded", () => {
             const raw = localStorage.getItem("kafel_pos_cart");
             let cart = [];
@@ -230,10 +234,10 @@
                     <tr class="hover:bg-slate-50">
                         <td class="py-3 px-3 font-mono text-slate-400 font-bold">${index + 1}</td>
                         <td class="py-3 px-3">
-                            <span class="font-bold text-slate-900 block">${item.brand} - ${item.model_name}</span>
-                            <span class="text-[10px] text-slate-400 font-mono">SKU: ${item.sku || 'KF-' + item.id}</span>
+                            <span class="font-bold text-slate-900 block">${esc(item.brand)} - ${esc(item.model_name)}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">SKU: ${esc(item.sku || 'KF-' + item.id)}</span>
                         </td>
-                        <td class="py-3 px-3 text-center font-bold text-slate-700">${item.size}</td>
+                        <td class="py-3 px-3 text-center font-bold text-slate-700">${esc(item.size)}</td>
                         <td class="py-3 px-3 text-center font-mono font-bold text-slate-700">${boxes} quti</td>
                         <td class="py-3 px-3 text-center font-mono font-black text-slate-900">${Number(item.qty).toFixed(2)} m²</td>
                         <td class="py-3 px-3 text-right font-mono font-medium text-slate-700">${Number(item.price).toLocaleString('ru-RU')} s.</td>

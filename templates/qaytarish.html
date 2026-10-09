@@ -22,7 +22,7 @@
             </p>
         </div>
 
-        <div class="flex items-center space-x-2">
+        <div class="page-actions flex flex-wrap items-center gap-2 sm:gap-2.5 md:justify-end flex-shrink-0">
             <a href="/sotuv" class="inline-flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs transition text-xs">
                 <i class="fa-solid fa-cash-register text-emerald-600"></i>
                 <span>Sotuv / Kassa</span>
@@ -402,8 +402,8 @@ let searchTimeout = null;
 
 // Initial load if query parameters provided
 document.addEventListener("DOMContentLoaded", () => {
-    const initId = "{{ initial_order_id }}";
-    const initNum = "{{ initial_order_num }}";
+    const initId = {{ (initial_order_id or "")|string|tojson }};
+    const initNum = {{ (initial_order_num or "")|string|tojson }};
     if (initId || initNum) {
         searchOrder(initId || initNum);
     }

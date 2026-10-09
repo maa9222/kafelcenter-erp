@@ -88,6 +88,62 @@ def serve_uploads(subpath):
 
 # ----------------- AVTORIZATSIYA & DEKORATORLAR -----------------
 
+VALID_ROLES = ("admin", "sotuvchi", "omborchi")
+
+def parse_number(value, default=None):
+    """Formadan/JSON dan kelgan sonni xavfsiz o'qiydi: '10 000', '1,5' kabi yozuvlarni ham tushunadi.
+    Noto'g'ri qiymatda default qaytaradi (500 xatolik o'rniga)."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        result = float(value)
+    else:
+        text = str(value).strip().replace(" ", "").replace(" ", "").replace(",", ".")
+        if text == "":
+            return default
+        try:
+            result = float(text)
+        except ValueError:
+            return default
+    if result != result or result in (float("inf"), float("-inf")):
+        return default
+    return result
+
+@app.before_request
+def validate_session_user():
+    """Sessiyadagi foydalanuvchi bazada hali ham faol ekanini tekshiradi.
+    O'chirilgan yoki bloklangan xodim 8 soatlik sessiya tugashini kutmasdan tizimdan chiqariladi."""
+    if "user_id" not in session or request.endpoint in ("static", "login", "logout"):
+        return None
+    user = database.get_user_by_id(session["user_id"])
+    if not user or not user["is_active"] or user["role"] not in VALID_ROLES:
+        session.clear()
+        if request.path.startswith("/api/"):
+            return jsonify({"success": False, "message": "Sessiya tugagan. Qaytadan kiring."}), 401
+        flash("Sessiyangiz tugadi yoki hisobingiz o'chirilgan. Qaytadan kiring.", "danger")
+        return redirect(url_for("login"))
+    # Rol yoki ism admin tomonidan o'zgartirilgan bo'lsa, sessiyani yangilaymiz
+    session["role"] = user["role"]
+    session["full_name"] = user["full_name"]
+    return None
+
+@app.before_request
+def csrf_origin_check():
+    """CSRF himoyasi: holatni o'zgartiruvchi so'rovlar faqat shu saytning o'zidan kelishi kerak.
+    Brauzer Origin (yoki Referer) sarlavhasini soxtalashtirishga ruxsat bermaydi."""
+    if request.method in ("GET", "HEAD", "OPTIONS") or app.config.get("TESTING"):
+        return None
+    source = request.headers.get("Origin") or request.headers.get("Referer")
+    if not source:
+        return None  # eski brauzerlar / to'g'ridan-to'g'ri so'rovlar: SameSite cookie himoya qiladi
+    if urlparse(source).netloc != urlparse(request.host_url).netloc:
+        if request.path.startswith("/api/") or request.is_json:
+            return jsonify({"success": False, "message": "Ruxsat etilmagan manbadan so'rov (CSRF)."}), 403
+        return "Ruxsat etilmagan manbadan so'rov (CSRF).", 403
+    return None
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -144,10 +200,15 @@ MAX_FAILED_ATTEMPTS = 5
 LOCKOUT_DURATION_SECONDS = 900  # 15 daqiqa bloklash
 
 def get_client_ip():
+    # Proxy sarlavhalariga faqat haqiqiy proxy orqali kelganda ishonamiz, aks holda hujumchi
+    # har so'rovda boshqa IP yozib, brute-force bloklashni chetlab o'tishi mumkin.
+    remote = request.remote_addr or "127.0.0.1"
+    if remote in ("127.0.0.1", "::1") and request.headers.get("X-Real-IP"):
+        return request.headers["X-Real-IP"].strip()  # VPS: nginx $remote_addr ni yozadi
     forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.remote_addr or "127.0.0.1"
+    if forwarded and os.environ.get("TRUST_PROXY", "").lower() in ("1", "true"):
+        return forwarded.split(",")[-1].strip()  # Render: proxy qo'shgan oxirgi qiymat
+    return remote
 
 def is_ip_locked(client_ip):
     now = time.time()
@@ -295,6 +356,8 @@ def admin_xodimlar():
 
         if not full_name or not username or not password:
             flash("Iltimos, barcha maydonlarni to'ldiring!", "danger")
+        elif role not in VALID_ROLES:
+            flash("Noto'g'ri rol tanlandi!", "danger")
         else:
             success, msg = database.create_user(username, password, full_name, role)
             if success:
@@ -318,7 +381,7 @@ def admin_ustalar():
                COUNT(DISTINCT o.id) as orders_count,
                COALESCE(SUM(o.total_amount), 0.0) as total_sales
         FROM customers c
-        LEFT JOIN orders o ON o.usta_id = c.id
+        LEFT JOIN orders o ON o.usta_id = c.id AND o.status != 'bekor_qilindi'
         WHERE c.customer_type IN ('usta', 'prorab')
         GROUP BY c.id
         ORDER BY c.id DESC
@@ -542,12 +605,16 @@ def ombor_yangi():
         model_name = request.form.get("model_name", "").strip()
         size = request.form.get("size", "").strip()
         unit = request.form.get("unit", "m²").strip()
-        box_size_m2 = float(request.form.get("box_size_m2", 1.44) or 1.44)
-        pieces_per_box = int(request.form.get("pieces_per_box", 4) or 4)
-        quantity = float(request.form.get("quantity_in_stock", 0) or 0)
-        min_quantity = float(request.form.get("min_quantity", 10) or 10)
-        price = float(request.form.get("price", 0) or 0)
-        cost_price = float(request.form.get("cost_price", 0) or 0)
+        box_size_m2 = parse_number(request.form.get("box_size_m2"), 1.44)
+        pieces_per_box = parse_number(request.form.get("pieces_per_box"), 4)
+        quantity = parse_number(request.form.get("quantity_in_stock"), 0.0)
+        min_quantity = parse_number(request.form.get("min_quantity"), 10.0)
+        price = parse_number(request.form.get("price"), 0.0)
+        cost_price = parse_number(request.form.get("cost_price"), 0.0)
+        if None in (box_size_m2, pieces_per_box, quantity, min_quantity, price, cost_price)                 or box_size_m2 <= 0 or pieces_per_box <= 0 or quantity < 0 or min_quantity < 0 or cost_price < 0:
+            flash("Raqamli maydonlar noto'g'ri kiritildi (manfiy yoki son bo'lmagan qiymat)!", "danger")
+            return redirect(url_for("ombor_yangi"))
+        pieces_per_box = int(pieces_per_box)
         location_rack = request.form.get("location_rack", "").strip()
         description = request.form.get("description", "").strip()
         
@@ -634,17 +701,22 @@ def ombor_tahrirlash(product_id):
         model_name = request.form.get("model_name", "").strip()
         size = request.form.get("size", "").strip()
         unit = request.form.get("unit", "m²").strip()
-        box_size_m2 = float(request.form.get("box_size_m2", product["box_size_m2"]) or 1.44)
-        pieces_per_box = int(request.form.get("pieces_per_box", product["pieces_per_box"]) or 4)
-        min_quantity = float(request.form.get("min_quantity", product["min_quantity"]) or 10)
-        price = float(request.form.get("price", product["price"]) or 0)
-        cost_price = float(request.form.get("cost_price", product["cost_price"]) or 0)
+        box_size_m2 = parse_number(request.form.get("box_size_m2"), product["box_size_m2"] or 1.44)
+        pieces_per_box = parse_number(request.form.get("pieces_per_box"), product["pieces_per_box"] or 4)
+        min_quantity = parse_number(request.form.get("min_quantity"), product["min_quantity"] or 10)
+        price = parse_number(request.form.get("price"), product["price"] or 0)
+        cost_price = parse_number(request.form.get("cost_price"), product["cost_price"] or 0)
         location_rack = request.form.get("location_rack", "").strip()
         description = request.form.get("description", "").strip()
         
         # Yangi kirim qo'shish (agar bo'lsa)
-        add_stock = float(request.form.get("add_stock", 0) or 0)
+        add_stock = parse_number(request.form.get("add_stock"), 0.0)
         current_stock = product["quantity_in_stock"]
+        if None in (box_size_m2, pieces_per_box, min_quantity, price, cost_price, add_stock)                 or box_size_m2 <= 0 or pieces_per_box <= 0 or min_quantity < 0 or price <= 0 or cost_price < 0                 or current_stock + add_stock < 0:
+            conn.close()
+            flash("Raqamli maydonlar noto'g'ri kiritildi (manfiy, nol yoki son bo'lmagan qiymat)!", "danger")
+            return redirect(url_for("ombor_tahrirlash", product_id=product_id))
+        pieces_per_box = int(pieces_per_box)
         new_stock = current_stock + add_stock
         
         image_path = product["image_path"]
@@ -706,7 +778,7 @@ def ombor_qr_stiker(product_id):
         flash("Mahsulot topilmadi!", "danger")
         return redirect(url_for("ombor_list"))
         
-    count = int(request.args.get("count", 4))
+    count = int(min(200, max(1, parse_number(request.args.get("count"), 4) or 4)))
     return render_template("qr_stiker.html", product=product, count=count)
 
 # ================= ZAVODLAR & MARKALAR BOSHQARUVI =================
@@ -770,7 +842,7 @@ def api_factories_edit(factory_id):
     phone = data.get("phone", "").strip()
     address = data.get("address", "").strip()
     note = data.get("note", "").strip()
-    is_active = int(data.get("is_active", 1) or 1)
+    is_active = 0 if str(data.get("is_active", 1)).strip().lower() in ("0", "false", "") else 1
 
     if not name:
         return jsonify({"success": False, "message": "Zavod yoki marka nomini kiriting!"}), 400
@@ -949,7 +1021,7 @@ def api_products_search():
     q = request.args.get("q", "").strip()
     brand = request.args.get("brand", "").strip()
     size = request.args.get("size", "").strip()
-    limit = int(request.args.get("limit", 24))
+    limit = int(min(200, max(1, parse_number(request.args.get("limit"), 24) or 24)))
 
     conn = database.get_db()
     cursor = conn.cursor()
@@ -989,59 +1061,93 @@ def api_checkout():
     if not items:
         return jsonify({"success": False, "message": "Savat bo'sh!"}), 400
         
-    customer_name = data.get("customer_name", "Mijoz").strip()
-    customer_phone = data.get("customer_phone", "").strip()
+    customer_name = str(data.get("customer_name") or "Mijoz").strip() or "Mijoz"
+    customer_phone = str(data.get("customer_phone") or "").strip()
     payment_method = data.get("payment_method", "naqd") # naqd, karta, aralash
-    cashier_note = data.get("cashier_note", "").strip()
-    discount_amount = float(data.get("discount_amount", 0) or 0)
-    
+    cashier_note = str(data.get("cashier_note") or "").strip()
+    raw_discount = data.get("discount_amount")
+    discount_amount = 0.0 if raw_discount in (None, "") else parse_number(raw_discount)
+    if discount_amount is None or discount_amount < 0:
+        return jsonify({"success": False, "message": "Chegirma summasi noto'g'ri kiritildi!"}), 400
+
     conn = database.get_db()
     cursor = conn.cursor()
     
     try:
-        # 1. Ombordagi qoldiqni tekshirish
+        # Yozish qulfini darhol olamiz: qoldiq tekshiruvi va nakladnoy raqami bir vaqtdagi
+        # boshqa savdo bilan aralashib ketmaydi
+        cursor.execute("BEGIN IMMEDIATE")
+        # 1. Savatni tekshirish. Narx har doim bazadan olinadi (brauzer yuborgan narxga ishonilmaydi),
+        #    miqdor musbat bo'lishi shart, bir xil kafel bir necha qatorda bo'lsa jami miqdor tekshiriladi.
+        requested_products = defaultdict(float)
+        requested_defects = defaultdict(float)
         for item in items:
-            qty = float(item["qty"])
-            if item.get("is_defect") or item.get("defect_id"):
-                def_id = int(item.get("defect_id") or item.get("id"))
-                cursor.execute("""
-                    SELECT bt.*, p.brand, p.model_name
-                    FROM broken_tiles bt
-                    JOIN products p ON bt.product_id = p.id
-                    WHERE bt.id = ?
-                """, (def_id,))
-                d_row = cursor.fetchone()
-                if not d_row:
-                    conn.rollback()
-                    conn.close()
-                    return jsonify({"success": False, "message": f"Siniq kafel (ID {def_id}) topilmadi!"}), 400
-                if d_row["status"] != 'omborda' or float(d_row["quantity"]) < qty:
-                    conn.rollback()
-                    conn.close()
-                    return jsonify({
-                        "success": False,
-                        "message": f"'{d_row['brand']} {d_row['model_name']}' siniq kafeli omborda yetarli emas! Omborda: {d_row['quantity']} {d_row['unit']}, so'raldi: {qty}"
-                    }), 400
+            qty = parse_number(item.get("qty") if isinstance(item, dict) else None)
+            if qty is None or qty <= 0:
+                conn.close()
+                return jsonify({"success": False, "message": "Savatdagi miqdor noto'g'ri (0 dan katta bo'lishi kerak)!"}), 400
+            item["qty"] = qty
+            try:
+                if item.get("is_defect") or item.get("defect_id"):
+                    item["_defect_id"] = int(item.get("defect_id") or item.get("id"))
+                    requested_defects[item["_defect_id"]] += qty
+                else:
+                    item["_product_id"] = int(item["id"])
+                    requested_products[item["_product_id"]] += qty
+            except (KeyError, TypeError, ValueError):
+                conn.close()
+                return jsonify({"success": False, "message": "Savatdagi mahsulot identifikatori noto'g'ri!"}), 400
+
+        defect_prices = {}
+        for def_id, qty in requested_defects.items():
+            cursor.execute("""
+                SELECT bt.*, p.brand, p.model_name, p.price AS product_price
+                FROM broken_tiles bt
+                JOIN products p ON bt.product_id = p.id
+                WHERE bt.id = ?
+            """, (def_id,))
+            d_row = cursor.fetchone()
+            if not d_row:
+                conn.close()
+                return jsonify({"success": False, "message": f"Siniq kafel (ID {def_id}) topilmadi!"}), 400
+            if d_row["status"] != 'omborda' or float(d_row["quantity"]) < qty:
+                conn.close()
+                return jsonify({
+                    "success": False,
+                    "message": f"'{d_row['brand']} {d_row['model_name']}' siniq kafeli omborda yetarli emas! Omborda: {d_row['quantity']} {d_row['unit']}, so'raldi: {qty}"
+                }), 400
+            disc = float(d_row["discounted_price"] or 0)
+            defect_prices[def_id] = disc if disc > 0 else round(float(d_row["product_price"] or 0) * 0.5, 2)
+
+        product_prices = {}
+        for p_id, qty in requested_products.items():
+            cursor.execute("SELECT id, brand, model_name, quantity_in_stock, price FROM products WHERE id = ?", (p_id,))
+            p = cursor.fetchone()
+            if not p:
+                conn.close()
+                return jsonify({"success": False, "message": f"Mahsulot (ID {p_id}) topilmadi!"}), 400
+            if p["quantity_in_stock"] < qty:
+                conn.close()
+                return jsonify({
+                    "success": False, 
+                    "message": f"'{p['brand']} {p['model_name']}' kafeli omborda yetarli emas! Omborda: {p['quantity_in_stock']} mavjud, so'raldi: {qty}"
+                }), 400
+            product_prices[p_id] = float(p["price"])
+
+        for item in items:
+            if "_defect_id" in item:
+                item["price"] = defect_prices[item["_defect_id"]]
             else:
-                p_id = item["id"]
-                cursor.execute("SELECT id, brand, model_name, quantity_in_stock FROM products WHERE id = ?", (p_id,))
-                p = cursor.fetchone()
-                if not p:
-                    conn.rollback()
-                    conn.close()
-                    return jsonify({"success": False, "message": f"Mahsulot (ID {p_id}) topilmadi!"}), 400
-                if p["quantity_in_stock"] < qty:
-                    conn.rollback()
-                    conn.close()
-                    return jsonify({
-                        "success": False, 
-                        "message": f"'{p['brand']} {p['model_name']}' kafeli omborda yetarli emas! Omborda: {p['quantity_in_stock']} mavjud, so'raldi: {qty}"
-                    }), 400
+                item["price"] = product_prices[item["_product_id"]]
+
+        subtotal = sum(i["qty"] * i["price"] for i in items)
+        if discount_amount > subtotal:
+            conn.close()
+            return jsonify({"success": False, "message": "Chegirma umumiy summadan katta bo'lishi mumkin emas!"}), 400
                 
         # 2. Buyurtma yaratish
-        subtotal = sum(float(i["qty"]) * float(i["price"]) for i in items)
         final_amount = max(0.0, subtotal - discount_amount)
-        order_num = database.generate_order_number()
+        order_num = database.generate_order_number(cursor)
         
         full_note = cashier_note
         if discount_amount > 0:
@@ -1052,7 +1158,7 @@ def api_checkout():
 
         is_nasiya = 1 if (data.get("is_nasiya") or payment_method == "nasiya") else 0
         raw_cust_id = data.get("customer_id")
-        customer_id = int(raw_cust_id) if raw_cust_id else None
+        customer_id = int(raw_cust_id) if raw_cust_id and str(raw_cust_id).isdigit() else None
 
         if is_nasiya:
             raw_paid = data.get("paid_amount")
@@ -1097,12 +1203,12 @@ def api_checkout():
         
         # 3. Buyurtma elementlarini kiritish va ombordan ayirish
         for item in items:
-            qty = float(item["qty"])
-            unit_price = float(item["price"])
+            qty = item["qty"]
+            unit_price = item["price"]
             item_total = qty * unit_price
             
-            if item.get("is_defect") or item.get("defect_id"):
-                def_id = int(item.get("defect_id") or item.get("id"))
+            if "_defect_id" in item:
+                def_id = item["_defect_id"]
                 cursor.execute("""
                     SELECT bt.*, p.brand, p.model_name, p.size, p.image_path, p.unit
                     FROM broken_tiles bt
@@ -1145,7 +1251,7 @@ def api_checkout():
                 """, (p_id, -qty, cur_def_qty, new_def_qty, order_num, seller_name,
                       f"Siniq/Brak sotuv #{order_num} ({qty} {d_row['unit']}, {item_total:,.0f} so'm, Sotuvchi: {seller_name})"))
             else:
-                p_id = item["id"]
+                p_id = item["_product_id"]
                 cursor.execute("SELECT * FROM products WHERE id = ?", (p_id,))
                 prod = cursor.fetchone()
                 
@@ -1206,9 +1312,15 @@ def api_order_dispatch(order_id):
     
     conn = database.get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT order_number FROM orders WHERE id = ?", (order_id,))
+    cursor.execute("SELECT order_number, status FROM orders WHERE id = ?", (order_id,))
     o_row = cursor.fetchone()
-    order_num_str = o_row["order_number"] if o_row else f"ID {order_id}"
+    if not o_row:
+        conn.close()
+        return jsonify({"success": False, "message": "Nakladnoy topilmadi!"}), 404
+    if o_row["status"] != "tolandi":
+        conn.close()
+        return jsonify({"success": False, "message": "Bu nakladnoy bo'yicha yuk allaqachon berilgan yoki bekor qilingan!"}), 400
+    order_num_str = o_row["order_number"]
 
     cursor.execute("""
         UPDATE orders SET
@@ -1400,6 +1512,7 @@ def api_return_process():
     cursor = conn.cursor()
     
     try:
+        cursor.execute("BEGIN IMMEDIATE")
         # 1. Buyurtmani tekshirish
         cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
         order = cursor.fetchone()
@@ -1407,6 +1520,15 @@ def api_return_process():
             conn.rollback()
             conn.close()
             return jsonify({"success": False, "message": "Buyurtma topilmadi!"}), 404
+        if order["status"] == "bekor_qilindi":
+            conn.close()
+            return jsonify({"success": False, "message": "Bekor qilingan buyurtma bo'yicha qaytarish mumkin emas!"}), 400
+
+        # Chegirma qaytariladigan summaga mutanosib taqsimlanadi (aks holda chegirmali savdoda
+        # xaridorga to'lagan pulidan ko'proq qaytarilib qo'yilardi)
+        cursor.execute("SELECT COALESCE(SUM(total_price), 0) FROM order_items WHERE order_id = ?", (order_id,))
+        items_sum = float(cursor.fetchone()[0] or 0)
+        price_ratio = min(1.0, float(order["total_amount"] or 0) / items_sum) if items_sum > 0 else 1.0
             
         # 20 kunlik muddat tekshiruvi
         raw_created = str(order["created_at"])[:19]
@@ -1431,10 +1553,11 @@ def api_return_process():
         # 2. Qaytarilayotgan mahsulotlar va miqdorlarni tekshirish
         total_return_amount = 0.0
         validated_returns = []
+        returning_now = defaultdict(float)  # bitta so'rovda bir qatorni ikki marta qaytarishdan himoya
         for r_item in returned_items:
             oi_id = r_item.get("order_item_id")
-            ret_qty = float(r_item.get("qty", 0) or 0)
-            if ret_qty <= 0:
+            ret_qty = parse_number(r_item.get("qty"), 0.0)
+            if ret_qty is None or ret_qty <= 0:
                 continue
                 
             cursor.execute("SELECT * FROM order_items WHERE id = ? AND order_id = ?", (oi_id, order_id))
@@ -1444,7 +1567,7 @@ def api_return_process():
                 conn.close()
                 return jsonify({"success": False, "message": f"Buyurtma elementi (ID {oi_id}) topilmadi!"}), 400
                 
-            already_ret = float(oi["returned_quantity"] or 0)
+            already_ret = float(oi["returned_quantity"] or 0) + returning_now[oi["id"]]
             orig_qty = float(oi["quantity"])
             max_can_return = max(0.0, orig_qty - already_ret)
             
@@ -1456,7 +1579,8 @@ def api_return_process():
                     "message": f"'{oi['brand']} {oi['model_name']}' kafeli bo'yicha maksimal {max_can_return} {oi['unit']} qaytarish mumkin (so'raldi: {ret_qty} {oi['unit']})!"
                 }), 400
                 
-            item_total = ret_qty * float(oi["unit_price"])
+            returning_now[oi["id"]] += ret_qty
+            item_total = round(ret_qty * float(oi["unit_price"]) * price_ratio, 2)
             total_return_amount += item_total
             validated_returns.append({
                 "order_item": oi,
@@ -1472,10 +1596,11 @@ def api_return_process():
         # 3. Almashtirilayotgan yangi mahsulotlarni tekshirish (agar bo'lsa)
         total_exchange_amount = 0.0
         validated_exchanges = []
+        exchanging_now = defaultdict(float)
         for ex_item in exchange_items:
             p_id = ex_item.get("product_id")
-            ex_qty = float(ex_item.get("qty", 0) or 0)
-            if ex_qty <= 0:
+            ex_qty = parse_number(ex_item.get("qty"), 0.0)
+            if ex_qty is None or ex_qty <= 0:
                 continue
                 
             cursor.execute("SELECT * FROM products WHERE id = ?", (p_id,))
@@ -1485,7 +1610,8 @@ def api_return_process():
                 conn.close()
                 return jsonify({"success": False, "message": f"Almashtirilayotgan mahsulot (ID {p_id}) topilmadi!"}), 400
                 
-            if float(p["quantity_in_stock"]) < ex_qty:
+            exchanging_now[p["id"]] += ex_qty
+            if float(p["quantity_in_stock"]) < exchanging_now[p["id"]]:
                 conn.rollback()
                 conn.close()
                 return jsonify({
@@ -1493,7 +1619,7 @@ def api_return_process():
                     "message": f"'{p['brand']} {p['model_name']}' kafeli omborda yetarli emas! Mavjud: {p['quantity_in_stock']} {p['unit']}, so'raldi: {ex_qty} {p['unit']}"
                 }), 400
                 
-            unit_price = float(ex_item.get("price") or p["price"])
+            unit_price = float(p["price"])  # narx bazadan olinadi, brauzerdan emas
             item_total = ex_qty * unit_price
             total_exchange_amount += item_total
             validated_exchanges.append({
@@ -1504,7 +1630,12 @@ def api_return_process():
             })
             
         diff_amount = total_exchange_amount - total_return_amount
-        return_num = database.generate_return_number()
+
+        # Nasiya savdoda qaytarilgan summa avval qarzdan yechiladi
+        debt_reduction = 0.0
+        if order["is_nasiya"] and float(order["debt_amount"] or 0) > 0:
+            debt_reduction = min(max(0.0, -diff_amount), float(order["debt_amount"] or 0))
+        return_num = database.generate_return_number(cursor)
         staff_name = session.get("full_name") or session.get("username") or "Sotuvchi"
         staff_id = session.get("user_id")
         
@@ -1528,16 +1659,28 @@ def api_return_process():
             q = vr["qty"]
             tot = vr["total_price"]
             p_id = oi["product_id"]
-            
-            cursor.execute("SELECT quantity_in_stock FROM products WHERE id = ?", (p_id,))
-            p_curr = cursor.fetchone()
-            prev_q = float(p_curr[0]) if p_curr else 0.0
-            new_q = prev_q + q
-            
-            # Ombordagi qoldiqni oshirish (Onborga qaytadi!)
-            cursor.execute("""
-                UPDATE products SET quantity_in_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-            """, (new_q, p_id))
+
+            if oi["is_defect"] and oi["defect_id"]:
+                # Siniq kafel asosiy omborga emas, siniqlar ro'yxatiga qaytadi
+                cursor.execute("SELECT quantity FROM broken_tiles WHERE id = ?", (oi["defect_id"],))
+                d_curr = cursor.fetchone()
+                prev_q = float(d_curr[0] or 0) if d_curr else 0.0
+                new_q = prev_q + q
+                cursor.execute("""
+                    UPDATE broken_tiles
+                    SET quantity = ?, status = 'omborda', sold_price = MAX(0, COALESCE(sold_price, 0) - ?)
+                    WHERE id = ?
+                """, (new_q, tot, oi["defect_id"]))
+            else:
+                cursor.execute("SELECT quantity_in_stock FROM products WHERE id = ?", (p_id,))
+                p_curr = cursor.fetchone()
+                prev_q = float(p_curr[0]) if p_curr else 0.0
+                new_q = prev_q + q
+
+                # Ombordagi qoldiqni oshirish (Omborga qaytadi!)
+                cursor.execute("""
+                    UPDATE products SET quantity_in_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+                """, (new_q, p_id))
             
             # Ombor harakatlariga yozish (Kirim / Qaytarish)
             cursor.execute("""
@@ -1602,6 +1745,10 @@ def api_return_process():
             
         # 7. orders jadvalini yangilash
         cursor.execute("UPDATE orders SET has_returns = 1 WHERE id = ?", (order_id,))
+        if debt_reduction > 0:
+            cursor.execute("UPDATE orders SET debt_amount = MAX(0, debt_amount - ?) WHERE id = ?", (debt_reduction, order_id))
+            if order["customer_id"]:
+                cursor.execute("UPDATE customers SET balance_debt = MAX(0, balance_debt - ?) WHERE id = ?", (debt_reduction, order["customer_id"]))
         
         conn.commit()
         conn.close()
@@ -1618,6 +1765,8 @@ def api_return_process():
         msg = f"Kafel muvaffaqiyatli qabul qilindi va omborga qaytarildi! (Hujjat № {return_num})"
         if validated_exchanges:
             msg += f" O'rniga {len(validated_exchanges)} xil yangi mahsulot berildi."
+        if debt_reduction > 0:
+            msg += f" Nasiya qarzidan {debt_reduction:,.0f} so'm yechildi."
             
         return jsonify({
             "success": True,
@@ -1626,7 +1775,8 @@ def api_return_process():
             "message": msg,
             "return_amount": total_return_amount,
             "exchange_amount": total_exchange_amount,
-            "diff_amount": diff_amount
+            "diff_amount": diff_amount,
+            "debt_reduction": debt_reduction
         })
         
     except Exception as e:
@@ -1679,11 +1829,15 @@ def mijozlar():
         full_name = request.form.get("full_name", "").strip()
         phone = request.form.get("phone", "").strip()
         customer_type = request.form.get("customer_type", "xaridor")
-        balance_debt = float(request.form.get("balance_debt", 0) or 0)
+        balance_debt = parse_number(request.form.get("balance_debt"), 0.0)
+        if balance_debt is None or balance_debt < 0:
+            balance_debt = None
         notes = request.form.get("notes", "").strip()
 
         if not full_name:
             flash("Iltimos, mijoz ismini kiriting!", "danger")
+        elif balance_debt is None:
+            flash("Qarz summasi noto'g'ri kiritildi!", "danger")
         else:
             cursor.execute("""
                 INSERT INTO customers (full_name, phone, customer_type, balance_debt, notes)
@@ -1750,14 +1904,14 @@ def mijozlar():
     )
 
 @app.route("/api/customer/<int:customer_id>/pay-debt", methods=["POST"])
-@login_required
+@role_required(["admin", "sotuvchi"])
 def api_customer_pay_debt(customer_id):
     data = request.get_json() or {}
-    amount = float(data.get("amount", 0) or 0)
+    amount = parse_number(data.get("amount"), 0.0)
     method = data.get("payment_method", "naqd")
-    note = data.get("note", "").strip()
+    note = str(data.get("note") or "").strip()
 
-    if amount <= 0:
+    if amount is None or amount <= 0:
         return jsonify({"success": False, "message": "To'lov summasi musbat bo'lishi kerak!"}), 400
 
     conn = database.get_db()
@@ -1768,7 +1922,14 @@ def api_customer_pay_debt(customer_id):
         conn.close()
         return jsonify({"success": False, "message": "Mijoz topilmadi!"}), 404
 
-    current_debt = float(customer["balance_debt"])
+    current_debt = float(customer["balance_debt"] or 0)
+    if current_debt <= 0:
+        conn.close()
+        return jsonify({"success": False, "message": "Mijozning qarzi yo'q!"}), 400
+    if amount > current_debt + 0.01:
+        conn.close()
+        return jsonify({"success": False, "message": f"To'lov qarzdan katta bo'lishi mumkin emas! Joriy qarz: {current_debt:,.0f} so'm"}), 400
+    amount = min(amount, current_debt)
     new_debt = max(0.0, current_debt - amount)
     received_by = session.get("full_name") or session.get("username") or "Kassir"
 
@@ -1921,7 +2082,7 @@ def xarajatlar():
 
     if request.method == "POST":
         category = request.form.get("category", "boshqa")
-        amount = float(request.form.get("amount", 0) or 0)
+        amount = parse_number(request.form.get("amount"), 0.0) or 0.0
         description = request.form.get("description", "").strip()
         expense_date = request.form.get("expense_date") or datetime.now().strftime("%Y-%m-%d")
         user_name = session.get("full_name") or session.get("username") or "Admin"
@@ -2001,8 +2162,8 @@ def sotuv_smeta():
 def api_report_product_defect(product_id):
     """Omborda yuklovchilar tomonidan sindirilgan yoki pachkada defekt chiqqan kafelni siniqlar bo'limiga o'tkazish"""
     data = request.get_json() or {}
-    quantity = float(data.get("quantity", 0) or 0)
-    reason = data.get("reason", "Yuk tushirishda sindi (yuklovchilar)").strip()
+    quantity = parse_number(data.get("quantity"), 0.0) or 0.0
+    reason = str(data.get("reason") or "Yuk tushirishda sindi (yuklovchilar)").strip()
     responsible_person = data.get("responsible_person", "").strip() or "Noma'lum"
     note = data.get("note", "").strip()
     user_name = session.get("full_name") or session.get("username") or "Omborchi"
@@ -2032,7 +2193,7 @@ def api_report_product_defect(product_id):
     loss_amount = round(quantity * unit_loss_rate, 2)
     
     # Siniq sotuv narxi (agar kiritilmagan bo'lsa, asl narxining 50% qilib tavsiya qilinadi)
-    discounted_price = float(data.get("discounted_price", 0) or 0)
+    discounted_price = parse_number(data.get("discounted_price"), 0.0) or 0.0
     if discounted_price <= 0:
         discounted_price = round(float(product["price"]) * 0.5, 0)
 
@@ -2167,16 +2328,22 @@ def api_defect_action(defect_id):
     data = request.get_json() or {}
     action_type = data.get("action_type", "hisobdan_chiqarildi").strip()
     action_note = (data.get("note") or data.get("action_note") or "").strip()
-    sale_price = float(data.get("sale_price", 0) or 0)
+    sale_price = parse_number(data.get("sale_price"), 0.0)
+    if sale_price is None or sale_price < 0:
+        return jsonify({"success": False, "message": "Sotish narxi noto'g'ri kiritildi!"}), 400
     user_name = session.get("full_name") or session.get("username") or "Xodim"
 
     conn = database.get_db()
     cursor = conn.cursor()
+    cursor.execute("BEGIN IMMEDIATE")
     cursor.execute("SELECT * FROM broken_tiles WHERE id = ?", (defect_id,))
     defect = cursor.fetchone()
     if not defect:
         conn.close()
         return jsonify({"success": False, "message": "Brak yozuvi topilmadi!"}), 404
+    if defect["status"] != "omborda" or float(defect["quantity"] or 0) <= 0:
+        conn.close()
+        return jsonify({"success": False, "message": "Bu siniq kafel allaqachon sotilgan yoki hisobdan chiqarilgan!"}), 400
 
     note_addon = f"[{action_type.upper()} ({user_name})]: {action_note}"
     new_loss = float(defect['loss_amount'] or 0)
@@ -2192,14 +2359,18 @@ def api_defect_action(defect_id):
         cursor.execute("SELECT * FROM products WHERE id = ?", (defect["product_id"],))
         prod = cursor.fetchone()
         
-        effective_price = sale_price if sale_price > 0 else float(defect["discounted_price"] or 0)
-        if effective_price <= 0 and prod:
-            effective_price = round(float(prod["price"] or 0) * 0.5, 0)
+        def_qty = float(defect["quantity"])
+        # sale_price - formada kiritilgan butun partiya summasi; discounted_price esa 1 birlik narxi
+        if sale_price > 0:
+            effective_price = sale_price
+        else:
+            unit_disc = float(defect["discounted_price"] or 0)
+            if unit_disc <= 0 and prod:
+                unit_disc = round(float(prod["price"] or 0) * 0.5, 0)
+            effective_price = unit_disc * def_qty
+        unit_price = effective_price / def_qty
 
-        def_qty = float(defect["quantity"] or 1.0)
-        unit_price = effective_price / def_qty if def_qty > 0 else effective_price
-
-        order_num = database.generate_order_number()
+        order_num = database.generate_order_number(cursor)
         cursor.execute("""
             INSERT INTO orders (
                 order_number, customer_name, customer_phone, total_amount, paid_amount,
@@ -2288,7 +2459,7 @@ def api_defect_action(defect_id):
 def api_defect_set_price(defect_id):
     """Admin/omborchi tomonidan siniq kafelga arzonlashtirilgan sotuv narxini belgilash"""
     data = request.get_json() or {}
-    price = float(data.get("discounted_price", 0) or 0)
+    price = parse_number(data.get("discounted_price"), -1.0)
     if price < 0:
         return jsonify({"success": False, "message": "Narx manfiy bo'lishi mumkin emas!"}), 400
 
@@ -2388,9 +2559,9 @@ def hisobot():
                    (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count,
                    (SELECT COALESCE(SUM(quantity), 0) FROM order_items WHERE order_id = o.id) as total_sqm
             FROM orders o
-            WHERE (o.seller_id = ? OR o.seller_name = ? OR o.seller_name LIKE ?)
+            WHERE (o.seller_id = ? OR (o.seller_id IS NULL AND o.seller_name = ?))
             ORDER BY o.id DESC
-        """, (user_id, user_name, f"%{user_name}%"))
+        """, (user_id, user_name))
         orders_rows = cursor.fetchall()
 
         # Ushbu sotuvchi sotgan barcha tovarlar agregatsiyasi (Spiskasi)
@@ -2403,10 +2574,10 @@ def hisobot():
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.id
             WHERE o.status != 'bekor_qilindi'
-              AND (o.seller_id = ? OR o.seller_name = ? OR o.seller_name LIKE ?)
+              AND (o.seller_id = ? OR (o.seller_id IS NULL AND o.seller_name = ?))
             GROUP BY oi.brand, oi.model_name, oi.size, oi.unit
             ORDER BY total_sum DESC
-        """, (user_id, user_name, f"%{user_name}%"))
+        """, (user_id, user_name))
         seller_sold_products = [dict(r) for r in cursor.fetchall()]
 
         for ord in orders_rows:
@@ -2676,10 +2847,10 @@ def hisobot():
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.id
                 WHERE o.status != 'bekor_qilindi'
-                  AND (o.seller_name = ? OR (SELECT full_name FROM users WHERE id = o.seller_id) = ? OR o.seller_name LIKE ?)
+                  AND ((o.seller_id IS NULL AND o.seller_name = ?) OR (SELECT full_name FROM users WHERE id = o.seller_id) = ?)
                 GROUP BY oi.brand, oi.model_name, oi.size, oi.unit
                 ORDER BY total_sum DESC
-            """, (s_name, s_name, f"%{s_name}%"))
+            """, (s_name, s_name))
             s_prods = [dict(r) for r in cursor.fetchall()]
             if s_prods:
                 all_sellers_breakdown.append({
@@ -2696,9 +2867,9 @@ def hisobot():
                        (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count,
                        (SELECT COALESCE(SUM(quantity), 0) FROM order_items WHERE order_id = o.id) as total_sqm
                 FROM orders o
-                WHERE (o.seller_name = ? OR (SELECT full_name FROM users WHERE id = o.seller_id) = ? OR o.seller_name LIKE ?)
+                WHERE ((o.seller_id IS NULL AND o.seller_name = ?) OR (SELECT full_name FROM users WHERE id = o.seller_id) = ?)
                 ORDER BY o.id DESC
-            """, (selected_seller, selected_seller, f"%{selected_seller}%"))
+            """, (selected_seller, selected_seller))
             orders_rows = cursor.fetchall()
         else:
             cursor.execute("""
@@ -2851,8 +3022,12 @@ def hisobot():
                    COALESCE(SUM(oi.quantity), 0.0) as sold_qty,
                    COALESCE(SUM(oi.total_price), 0.0) as sold_sum
             FROM products p
-            LEFT JOIN order_items oi ON oi.product_id = p.id
-            LEFT JOIN orders o ON oi.order_id = o.id AND o.status != 'bekor_qilindi'
+            LEFT JOIN (
+                SELECT oi2.product_id, oi2.quantity, oi2.total_price
+                FROM order_items oi2
+                JOIN orders o2 ON oi2.order_id = o2.id
+                WHERE o2.status != 'bekor_qilindi'
+            ) oi ON oi.product_id = p.id
             GROUP BY p.id
             ORDER BY sold_qty DESC, p.quantity_in_stock DESC
         """)
@@ -2978,9 +3153,8 @@ def kpi_dashboard():
         SELECT 
             COUNT(DISTINCT o.id) as team_orders,
             COALESCE(SUM(o.total_amount), 0.0) as team_revenue,
-            COALESCE(SUM(oi.quantity), 0.0) as team_sqm
+            COALESCE(SUM((SELECT SUM(quantity) FROM order_items WHERE order_id = o.id)), 0.0) as team_sqm
         FROM orders o
-        LEFT JOIN order_items oi ON o.id = oi.order_id
         WHERE o.status != 'bekor_qilindi' AND {orders_date_cond}
     """
     cursor.execute(team_query, date_params)
@@ -3001,9 +3175,8 @@ def kpi_dashboard():
             SELECT 
                 COUNT(DISTINCT o.id) as orders_count,
                 COALESCE(SUM(o.total_amount), 0.0) as total_revenue,
-                COALESCE(SUM(oi.quantity), 0.0) as total_sqm
+                COALESCE(SUM((SELECT SUM(quantity) FROM order_items WHERE order_id = o.id)), 0.0) as total_sqm
             FROM orders o
-            LEFT JOIN order_items oi ON o.id = oi.order_id
             WHERE o.status != 'bekor_qilindi' 
               AND (o.seller_name = ? OR o.seller_name = ?)
               AND {orders_date_cond}
@@ -3145,9 +3318,8 @@ def kpi_dashboard():
                     ELSE CAST(o.id AS TEXT)
                 END) as clients_count,
                 COALESCE(SUM(o.total_amount), 0.0) as total_revenue,
-                COALESCE(SUM(oi.quantity), 0.0) as total_sqm
+                COALESCE(SUM((SELECT SUM(quantity) FROM order_items WHERE order_id = o.id)), 0.0) as total_sqm
             FROM orders o
-            LEFT JOIN order_items oi ON o.id = oi.order_id
             WHERE o.status != 'bekor_qilindi'
               AND o.usta_id = ?
               AND {orders_date_cond}
@@ -3250,13 +3422,13 @@ def kpi_dashboard():
         total_usta_sqm=total_usta_sqm,
         total_usta_orders=total_usta_orders,
         total_usta_bonus=total_usta_bonus,
-        chart_labels=json.dumps(chart_labels),
-        chart_revenues=json.dumps(chart_revenues),
-        chart_sqm=json.dumps(chart_sqm),
-        usta_chart_labels=json.dumps(usta_chart_labels),
-        usta_chart_clients=json.dumps(usta_chart_clients),
-        usta_chart_revenues=json.dumps(usta_chart_revenues),
-        usta_chart_sqm=json.dumps(usta_chart_sqm)
+        chart_labels=chart_labels,
+        chart_revenues=chart_revenues,
+        chart_sqm=chart_sqm,
+        usta_chart_labels=usta_chart_labels,
+        usta_chart_clients=usta_chart_clients,
+        usta_chart_revenues=usta_chart_revenues,
+        usta_chart_sqm=usta_chart_sqm
     )
 
 # -----------------------------------------------------------------------------
@@ -3285,9 +3457,9 @@ def export_excel_ombor():
         term = f"%{q}%"
         params.extend([term, term, term, term])
     if status == "low":
-        query += " AND quantity_in_stock <= min_stock_alert"
+        query += " AND quantity_in_stock <= min_quantity AND quantity_in_stock > 0"
     elif status == "out":
-        query += " AND quantity_in_stock = 0"
+        query += " AND quantity_in_stock <= 0"
     query += " ORDER BY brand ASC, model_name ASC"
     cursor.execute(query, params)
     products = [dict(r) for r in cursor.fetchall()]
@@ -3996,7 +4168,7 @@ def export_excel_mijozlar():
                COUNT(o.id) as orders_count,
                COALESCE(SUM(o.total_amount), 0.0) as total_spent
         FROM customers c
-        LEFT JOIN orders o ON o.customer_id = c.id
+        LEFT JOIN orders o ON o.customer_id = c.id AND o.status != 'bekor_qilindi'
         GROUP BY c.id
         ORDER BY c.id DESC
     """)
@@ -4099,7 +4271,7 @@ def export_excel_ustalar():
                COALESCE(SUM(o.total_amount), 0.0) as total_sales,
                COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o2 ON oi.order_id = o2.id WHERE o2.usta_id = c.id), 0.0) as total_sqm
         FROM customers c
-        LEFT JOIN orders o ON o.usta_id = c.id
+        LEFT JOIN orders o ON o.usta_id = c.id AND o.status != 'bekor_qilindi'
         WHERE c.customer_type IN ('usta', 'prorab')
         GROUP BY c.id
         ORDER BY c.id DESC
@@ -4148,6 +4320,7 @@ with app.app_context():
     database.init_db()
 
 if __name__ == "__main__":
-    is_debug = os.environ.get("FLASK_DEBUG", "1").lower() in ("1", "true")
+    # Debug rejimi faqat aniq yoqilganda: Werkzeug debuggeri tarmoqda ochiq bo'lsa, kod bajarish mumkin
+    is_debug = os.environ.get("FLASK_DEBUG", "0").lower() in ("1", "true")
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=is_debug)

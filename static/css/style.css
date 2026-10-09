@@ -16,6 +16,113 @@ body {
     background-color: #f8fafc;
     color: #1e293b;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* ---------- Design polish ---------- */
+
+/* Main workspace: soft tinted canvas instead of flat grey */
+.app-layout-wrapper {
+    background:
+        radial-gradient(1200px 500px at 100% -10%, rgba(14, 165, 233, 0.06), transparent 60%),
+        radial-gradient(900px 420px at -10% 0%, rgba(99, 102, 241, 0.05), transparent 55%),
+        #f6f8fb !important;
+}
+
+/* 900 weight looked heavy everywhere - 800 keeps the hierarchy but reads cleaner */
+.font-black { font-weight: 800 !important; }
+
+/* Tailwind v3 (CDN) has no shadow-xs / animate-fadeIn - templates use them, so define them */
+.shadow-xs { box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05); }
+.animate-fadeIn { animation: fadeIn 0.35s ease-out both; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* White cards: hairline border + layered soft shadow */
+main .bg-white.rounded-3xl,
+main .bg-white.rounded-2xl {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px -6px rgba(15, 23, 42, 0.06);
+    border-color: rgba(226, 232, 240, 0.9);
+}
+
+/* Tables: sticky-feeling header, zebra hover */
+main table thead th {
+    letter-spacing: 0.04em;
+}
+main table tbody tr {
+    transition: background-color 0.15s ease;
+}
+main table tbody tr:hover {
+    background-color: rgba(241, 245, 249, 0.7);
+}
+
+/* Form controls: consistent focus ring */
+main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+main select:focus,
+main textarea:focus {
+    outline: none;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15) !important;
+}
+
+/* Buttons & links: subtle press feedback, keyboard focus ring */
+button, a {
+    -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled):active, a.inline-flex:active {
+    transform: scale(0.98);
+}
+button:focus-visible, a:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+}
+button:disabled {
+    cursor: not-allowed;
+}
+
+/* Sidebar: thin dark scrollbar, nicer hover */
+#sidebar ::-webkit-scrollbar-track { background: transparent; }
+#sidebar ::-webkit-scrollbar-thumb { background: #334155; }
+#sidebar {
+    background-image: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
+}
+
+/* Header action rows never squash button labels into 3 lines */
+.page-actions > a,
+.page-actions > button {
+    white-space: nowrap;
+}
+
+/* Horizontal tab strip (scrolls on narrow screens instead of truncating) */
+.tab-strip {
+    scrollbar-width: none;
+}
+.tab-strip::-webkit-scrollbar { display: none; }
+
+/* Chart empty state overlay */
+.chart-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: none;
+}
+.chart-empty i { font-size: 28px; color: #cbd5e1; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 .font-mono {
@@ -141,7 +248,7 @@ body {
     color: #ffffff;
     box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.35);
     display: flex;
-    items-center: center;
+    align-items: center;
     gap: 12px;
     font-size: 13px;
     font-weight: 600;

@@ -19,7 +19,7 @@
                 Ustalar, prorablar va doimiy xaridorlar balansi, nasiya qarzlarini hisobga olish va to'lovlar auditi
             </p>
         </div>
-        <div class="flex items-center space-x-2.5">
+        <div class="page-actions flex flex-wrap items-center gap-2 sm:gap-2.5 md:justify-end flex-shrink-0">
             <a href="/export/excel/mijozlar" class="inline-flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-4 py-2.5 rounded-2xl border border-emerald-300 shadow-sm transition text-xs sm:text-sm" title="Mijozlar va nasiya daftarini Excelga (.xlsx) yuklash">
                 <i class="fa-solid fa-file-excel text-emerald-600 text-base"></i>
                 <span>Excelga yuklash</span>
@@ -206,7 +206,7 @@
                             </td>
                             <td class="py-3.5 px-4 text-center">
                                 {% if c.balance_debt > 0 %}
-                                    <button onclick="openPayDebtModal({{ c.id }}, '{{ c.full_name }}', {{ c.balance_debt }})" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center space-x-1.5 mx-auto">
+                                    <button onclick="openPayDebtModal({{ c.id }}, {{ (c.full_name)|tojson|forceescape }}, {{ c.balance_debt }})" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center space-x-1.5 mx-auto">
                                         <i class="fa-solid fa-hand-holding-dollar"></i>
                                         <span>Qarz To'lash</span>
                                     </button>

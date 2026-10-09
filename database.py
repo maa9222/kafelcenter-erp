@@ -357,14 +357,19 @@ def delete_user(user_id):
     conn.commit()
     conn.close()
 
-def generate_order_number():
+def generate_order_number(cursor=None):
+    """cursor berilsa, raqam o'sha tranzaksiya ichida olinadi (BEGIN IMMEDIATE bilan birga
+    ishlatilganda bir vaqtdagi ikki savdo bir xil raqam olmaydi)."""
     now = datetime.now()
     prefix = now.strftime("NK-%y%m%d-")
-    conn = get_db()
-    cursor = conn.cursor()
+    own_conn = cursor is None
+    if own_conn:
+        conn = get_db()
+        cursor = conn.cursor()
     cursor.execute("SELECT order_number FROM orders WHERE order_number LIKE ? ORDER BY id DESC LIMIT 1", (f"{prefix}%",))
     last = cursor.fetchone()
-    conn.close()
+    if own_conn:
+        conn.close()
     if last and last[0]:
         try:
             last_num = int(last[0].split("-")[-1])
@@ -375,14 +380,19 @@ def generate_order_number():
         next_num = 1
     return f"{prefix}{next_num:04d}"
 
-def generate_return_number():
+def generate_return_number(cursor=None):
+    """cursor berilsa, raqam o'sha tranzaksiya ichida olinadi (BEGIN IMMEDIATE bilan birga
+    ishlatilganda bir vaqtdagi ikki savdo bir xil raqam olmaydi)."""
     now = datetime.now()
     prefix = now.strftime("QYT-%y%m%d-")
-    conn = get_db()
-    cursor = conn.cursor()
+    own_conn = cursor is None
+    if own_conn:
+        conn = get_db()
+        cursor = conn.cursor()
     cursor.execute("SELECT return_number FROM returns WHERE return_number LIKE ? ORDER BY id DESC LIMIT 1", (f"{prefix}%",))
     last = cursor.fetchone()
-    conn.close()
+    if own_conn:
+        conn.close()
     if last and last[0]:
         try:
             last_num = int(last[0].split("-")[-1])

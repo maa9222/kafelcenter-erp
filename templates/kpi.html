@@ -852,9 +852,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-let currentPeriod = "{{ period }}";
+let currentPeriod = {{ period|tojson }};
 let currentBonusRate = {{ bonus_rate }};
 let currentUstaRate = {{ usta_rate }};
 
@@ -992,19 +991,19 @@ async function viewUstaDetails(ustaId) {
                 data.orders.forEach(o => {
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="py-2.5 px-3 font-mono font-bold text-slate-800">${o.order_number}</td>
+                            <td class="py-2.5 px-3 font-mono font-bold text-slate-800">${escapeHtml(o.order_number)}</td>
                             <td class="py-2.5 px-3">
-                                <span class="font-bold text-slate-900 block">${o.customer_name || 'Mijoz'}</span>
-                                <span class="text-[10px] text-slate-400 font-mono">${o.customer_phone || ''}</span>
+                                <span class="font-bold text-slate-900 block">${escapeHtml(o.customer_name || 'Mijoz')}</span>
+                                <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(o.customer_phone || '')}</span>
                             </td>
-                            <td class="py-2.5 px-3 text-[11px] text-slate-600 max-w-[180px] truncate" title="${o.tiles_summary || ''}">
-                                ${o.tiles_summary || '—'}
+                            <td class="py-2.5 px-3 text-[11px] text-slate-600 max-w-[180px] truncate" title="${escapeHtml(o.tiles_summary || '')}">
+                                ${escapeHtml(o.tiles_summary || '—')}
                             </td>
                             <td class="py-2.5 px-3 text-right font-mono font-bold text-sky-700">${Number(o.total_sqm).toFixed(1)} m²</td>
                             <td class="py-2.5 px-3 text-right font-mono font-black text-slate-900">${Number(o.total_amount).toLocaleString('ru-RU')} s.</td>
                             <td class="py-2.5 px-3 text-center text-[10px] text-slate-500 font-mono">${o.created_at.substring(0, 10)}</td>
                             <td class="py-2.5 px-3 text-center">
-                                <a href="/nakladnoy/${o.id}" target="_blank" class="text-sky-600 hover:text-sky-800 font-bold" title="Nakladnoyni ko'rish">
+                                <a href="/nakladnoy/${Number(o.id)}" target="_blank" class="text-sky-600 hover:text-sky-800 font-bold" title="Nakladnoyni ko'rish">
                                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                                 </a>
                             </td>
@@ -1037,9 +1036,9 @@ document.addEventListener("DOMContentLoaded", function() {
     // 1. Ustalar Chart
     const ustaCtx = document.getElementById('ustaKpiChart');
     if (ustaCtx) {
-        const ustaLabels = {{ usta_chart_labels|safe }};
-        const ustaClients = {{ usta_chart_clients|safe }};
-        const ustaRevenues = {{ usta_chart_revenues|safe }};
+        const ustaLabels = {{ usta_chart_labels|tojson }};
+        const ustaClients = {{ usta_chart_clients|tojson }};
+        const ustaRevenues = {{ usta_chart_revenues|tojson }};
 
         new Chart(ustaCtx, {
             type: 'bar',
@@ -1124,9 +1123,9 @@ document.addEventListener("DOMContentLoaded", function() {
     // 2. Staff Chart
     const staffCtx = document.getElementById('sellerKpiChart');
     if (staffCtx) {
-        const labels = {{ chart_labels|safe }};
-        const revenues = {{ chart_revenues|safe }};
-        const sqm = {{ chart_sqm|safe }};
+        const labels = {{ chart_labels|tojson }};
+        const revenues = {{ chart_revenues|tojson }};
+        const sqm = {{ chart_sqm|tojson }};
 
         new Chart(staffCtx, {
             type: 'bar',

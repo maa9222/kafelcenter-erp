@@ -366,13 +366,13 @@
     {% if current_user and current_user.role == 'sotuvchi' %}
     <!-- SOTUVCHI TABS (Faqat 2 ta: Savdo & Spiska va Shaxsiy Amallar) -->
     <div id="tabsNav" class="grid grid-cols-2 gap-2 bg-slate-200/80 p-1.5 rounded-2xl select-none no-print">
-        <button type="button" onclick="switchTab('ordersTab')" id="btn-ordersTab" class="tab-btn active py-2 sm:py-2.5 px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 bg-white text-slate-900 shadow-sm font-black text-xs sm:text-sm">
+        <button type="button" onclick="switchTab('ordersTab')" id="btn-ordersTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap active py-2 sm:py-2.5 px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 bg-white text-slate-900 shadow-sm font-black text-xs sm:text-sm">
             <i class="fa-solid fa-cart-shopping text-sky-600 text-sm"></i>
             <span class="truncate">Mening Savdolarim & Tovar Spiskam</span>
             <span class="bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">{{ orders_audit|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('logsTab')" id="btn-logsTab" class="tab-btn py-2 sm:py-2.5 px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-xs sm:text-sm">
+        <button type="button" onclick="switchTab('logsTab')" id="btn-logsTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-xs sm:text-sm">
             <i class="fa-solid fa-clock-rotate-left text-amber-600 text-sm"></i>
             <span class="truncate">Mening Amallarim Tarixi</span>
             <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono font-black">{{ action_logs|length }}</span>
@@ -380,38 +380,38 @@
     </div>
     {% elif current_user and current_user.role == 'omborchi' %}
     <!-- OMBORCHI TABS (6 ta Omborxona bo'limi, umumiy kassa hisobotisiz) -->
-    <div id="tabsNav" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2 bg-slate-200/80 p-1.5 rounded-2xl select-none no-print">
-        <button type="button" onclick="switchTab('inboundTab')" id="btn-inboundTab" class="tab-btn active py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 bg-white text-slate-900 shadow-sm font-black text-[11px] sm:text-xs lg:text-sm">
+    <div id="tabsNav" class="tab-strip flex overflow-x-auto gap-1.5 sm:gap-2 bg-slate-200/80 p-1.5 rounded-2xl select-none no-print">
+        <button type="button" onclick="switchTab('inboundTab')" id="btn-inboundTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap active py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 bg-white text-slate-900 shadow-sm font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-boxes-packing text-emerald-600 text-xs sm:text-sm"></i>
             <span class="truncate">Kirim Tarixi</span>
             <span class="bg-emerald-100 text-emerald-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono">{{ inbound_records|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('balanceTab')" id="btn-balanceTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('balanceTab')" id="btn-balanceTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-scale-balanced text-indigo-600 text-xs sm:text-sm"></i>
             <span class="truncate">Ombor Qoldig'i & Joylashuv</span>
             <span class="bg-indigo-100 text-indigo-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono">{{ tiles_balance|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('ordersTab')" id="btn-ordersTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('ordersTab')" id="btn-ordersTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-truck-ramp-box text-sky-600 text-xs sm:text-sm"></i>
             <span class="truncate">Yuk Topshirish Nazorati</span>
             <span class="bg-sky-100 text-sky-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono">{{ orders_audit|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('brandsTab')" id="btn-brandsTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('brandsTab')" id="btn-brandsTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-industry text-purple-600 text-xs sm:text-sm"></i>
             <span class="truncate">Zavodlar & Markalar</span>
             <span class="bg-purple-100 text-purple-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono font-black">{{ brands_summary|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('brokenTab')" id="btn-brokenTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('brokenTab')" id="btn-brokenTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-heart-crack text-rose-600 text-xs sm:text-sm"></i>
             <span class="truncate">Siniq & Braklar</span>
             <span class="bg-rose-100 text-rose-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono font-black">{{ broken_records|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('logsTab')" id="btn-logsTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('logsTab')" id="btn-logsTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-clock-rotate-left text-amber-600 text-xs sm:text-sm"></i>
             <span class="truncate">Ombor Tarixi</span>
             <span class="bg-amber-100 text-amber-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono font-black">{{ action_logs|length }}</span>
@@ -419,43 +419,43 @@
     </div>
     {% else %}
     <!-- ADMIN TABS (Barcha 7 ta bo'lim) -->
-    <div id="tabsNav" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-1.5 sm:gap-2 bg-slate-200/80 p-1.5 rounded-2xl select-none no-print">
-        <button type="button" onclick="switchTab('generalTab')" id="btn-generalTab" class="tab-btn active py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 bg-white text-slate-900 shadow-sm font-black text-[11px] sm:text-xs lg:text-sm">
+    <div id="tabsNav" class="tab-strip flex overflow-x-auto gap-1.5 sm:gap-2 bg-slate-200/80 p-1.5 rounded-2xl select-none no-print">
+        <button type="button" onclick="switchTab('generalTab')" id="btn-generalTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap active py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 bg-white text-slate-900 shadow-sm font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-chart-pie text-indigo-600 text-xs sm:text-sm"></i>
             <span class="truncate">Umumiy Hisobot</span>
         </button>
 
-        <button type="button" onclick="switchTab('ordersTab')" id="btn-ordersTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('ordersTab')" id="btn-ordersTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-clipboard-check text-sky-600 text-xs sm:text-sm"></i>
             <span class="truncate">Savdo & Topshirish</span>
             <span class="bg-sky-100 text-sky-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono">{{ orders_audit|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('inboundTab')" id="btn-inboundTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('inboundTab')" id="btn-inboundTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-boxes-packing text-emerald-600 text-xs sm:text-sm"></i>
             <span class="truncate">Kirim Tarixi</span>
             <span class="bg-emerald-100 text-emerald-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono">{{ inbound_records|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('balanceTab')" id="btn-balanceTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('balanceTab')" id="btn-balanceTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-scale-balanced text-indigo-600 text-xs sm:text-sm"></i>
             <span class="truncate">Qoldiq & Balans</span>
             <span class="bg-indigo-100 text-indigo-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono">{{ tiles_balance|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('brandsTab')" id="btn-brandsTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('brandsTab')" id="btn-brandsTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-industry text-purple-600 text-xs sm:text-sm"></i>
             <span class="truncate">Kafel Markalari</span>
             <span class="bg-purple-100 text-purple-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono font-black">{{ brands_summary|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('brokenTab')" id="btn-brokenTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('brokenTab')" id="btn-brokenTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-heart-crack text-rose-600 text-xs sm:text-sm"></i>
             <span class="truncate">Siniq & Braklar</span>
             <span class="bg-rose-100 text-rose-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono font-black">{{ broken_records|length }}</span>
         </button>
 
-        <button type="button" onclick="switchTab('logsTab')" id="btn-logsTab" class="tab-btn py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
+        <button type="button" onclick="switchTab('logsTab')" id="btn-logsTab" class="tab-btn flex-1 flex-shrink-0 whitespace-nowrap py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-black text-[11px] sm:text-xs lg:text-sm">
             <i class="fa-solid fa-clock-rotate-left text-amber-600 text-xs sm:text-sm"></i>
             <span class="truncate">Amallar Tarixi</span>
             <span class="bg-amber-100 text-amber-800 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full font-mono font-black">{{ action_logs|length }}</span>
